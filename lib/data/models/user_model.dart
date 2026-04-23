@@ -1,9 +1,11 @@
+import 'package:hr_management_system/core/enums/app_enums.dart';
+
 /// User Model for authentication and user data
 class User {
   final String id;
   final String email;
   final String? fullName;
-  final String role;
+  final UserRole role;
   final String? phoneNumber;
   final String? profileImage;
   final bool isActive;
@@ -27,7 +29,7 @@ class User {
       id: json['id'] ?? '',
       email: json['email'] ?? '',
       fullName: json['full_name'],
-      role: json['role'] ?? 'employee',
+      role: UserRole.fromString(json['role'] ?? 'employee'),
       phoneNumber: json['phone_number'],
       profileImage: json['profile_image'],
       isActive: json['is_active'] ?? true,
@@ -45,7 +47,7 @@ class User {
       'id': id,
       'email': email,
       'full_name': fullName,
-      'role': role,
+      'role': role.toStringValue(),
       'phone_number': phoneNumber,
       'profile_image': profileImage,
       'is_active': isActive,
@@ -58,7 +60,7 @@ class User {
     String? id,
     String? email,
     String? fullName,
-    String? role,
+    UserRole? role,
     String? phoneNumber,
     String? profileImage,
     bool? isActive,
@@ -91,6 +93,6 @@ class User {
 
   @override
   String toString() {
-    return 'User(id: $id, email: $email, fullName: $fullName, role: $role)';
+    return 'User(id: $id, email: $email, fullName: $fullName, role: ${role.displayName})';
   }
 }

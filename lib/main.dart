@@ -4,6 +4,11 @@ import 'config/environment.dart';
 import 'config/supabase_config.dart';
 import 'core/theme/app_theme.dart';
 import 'config/app_routes.dart';
+import 'presentation/screens/main_layout.dart';
+import 'presentation/screens/employee_list_screen.dart';
+import 'presentation/screens/employee_details_screen.dart';
+import 'presentation/screens/employee_form_screen.dart';
+import 'data/models/employee_model.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,7 +24,7 @@ void main() async {
 }
 
 class HRManagementApp extends ConsumerWidget {
-  const HRManagementApp({Key? key}) : super(key: key);
+  const HRManagementApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -29,14 +34,49 @@ class HRManagementApp extends ConsumerWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.light,
-      home: const SplashScreen(),
+      home: const MainLayout(), // Skip splash, go directly to MainLayout
+      onGenerateRoute: (settings) {
+        if (settings.name == AppRoutes.employees) {
+          return MaterialPageRoute(builder: (_) => const EmployeeListScreen());
+        }
+        
+        if (settings.name != null && settings.name!.startsWith('/employees/')) {
+          final parts = settings.name!.split('/');
+          if (parts.length == 3) {
+            final id = parts[2];
+            // View details
+            final args = settings.arguments as Employee?;
+            if (args != null) {
+              return MaterialPageRoute(
+                builder: (_) => EmployeeDetailsScreen(employee: args),
+              );
+            }
+          } else if (parts.length == 4 && parts[3] == 'edit') {
+            final id = parts[2];
+            // Edit or Add
+            if (id == 'new') {
+              return MaterialPageRoute(
+                builder: (_) => const EmployeeFormScreen(),
+              );
+            } else {
+              final args = settings.arguments as Employee?;
+              return MaterialPageRoute(
+                builder: (_) => EmployeeFormScreen(employee: args),
+              );
+            }
+          }
+        }
+        
+        return null;
+      },
     );
   }
 }
 
-/// Splash Screen - Initial entry point
+/// Splash Screen - Initial entry point (Optional - can be enabled later)
+/// To use splash screen, replace `AdminDashboardScreen()` with `SplashScreen()` in HRManagementApp.home
 class SplashScreen extends ConsumerStatefulWidget {
-  const SplashScreen({Key? key}) : super(key: key);
+  const SplashScreen({super.key});
 
   @override
   ConsumerState<SplashScreen> createState() => _SplashScreenState();
@@ -50,8 +90,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   Future<void> _navigateToNextScreen() async {
-    // Simulate loading delay
-    await Future.delayed(const Duration(seconds: 2));
+    // Simulate loading delay (set to 0 to skip)
+    await Future.delayed(const Duration(seconds: 0)); // Changed from 2 to 0
 
     if (!mounted) return;
 
