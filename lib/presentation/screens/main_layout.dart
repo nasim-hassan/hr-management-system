@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:hr_management_system/core/theme/app_theme.dart';
 import 'package:hr_management_system/presentation/screens/dashboard_screen.dart';
 import 'package:hr_management_system/presentation/screens/employee_list_screen.dart';
+import 'package:hr_management_system/presentation/screens/attendance_list_screen.dart';
+import 'package:hr_management_system/presentation/screens/leave_request_list_screen.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -16,10 +18,10 @@ class _MainLayoutState extends State<MainLayout> {
   final List<Widget> _screens = [
     const AdminDashboardScreen(),
     const EmployeeListScreen(),
-    _PlaceholderScreen(title: 'Attendance', icon: Icons.access_time),
-    _PlaceholderScreen(title: 'Leave Requests', icon: Icons.event_note),
-    _PlaceholderScreen(title: 'Payroll', icon: Icons.payments),
-    _PlaceholderScreen(title: 'Reports', icon: Icons.bar_chart),
+    const AttendanceListScreen(),
+    const LeaveRequestListScreen(),
+    const _PlaceholderScreen(title: 'Payroll', icon: Icons.payments),
+    const _PlaceholderScreen(title: 'Reports', icon: Icons.bar_chart),
   ];
 
   final List<_SidebarItem> _menuItems = [
@@ -114,7 +116,7 @@ class _MainLayoutState extends State<MainLayout> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
+              color: Colors.white.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(16),
             ),
             child: const Icon(Icons.business_center, color: Colors.white, size: 40),
@@ -138,7 +140,7 @@ class _MainLayoutState extends State<MainLayout> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        color: isSelected ? Colors.white.withOpacity(0.15) : Colors.transparent,
+        color: isSelected ? Colors.white.withValues(alpha: 0.15) : Colors.transparent,
         borderRadius: BorderRadius.circular(12),
       ),
       child: ListTile(
@@ -168,12 +170,12 @@ class _MainLayoutState extends State<MainLayout> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         border: Border(
-          top: BorderSide(color: Colors.white.withOpacity(0.1)),
+          top: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
         ),
       ),
-      child: Row(
+      child: const Row(
         children: [
-          const CircleAvatar(
+          CircleAvatar(
             backgroundColor: Colors.white,
             child: Text(
               'NH',
@@ -183,8 +185,8 @@ class _MainLayoutState extends State<MainLayout> {
               ),
             ),
           ),
-          const SizedBox(width: 12),
-          const Expanded(
+          SizedBox(width: 12),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

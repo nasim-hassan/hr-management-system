@@ -37,7 +37,7 @@ class _EmployeeListScreenState extends State<EmployeeListScreen> {
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -109,7 +109,7 @@ class _EmployeeListScreenState extends State<EmployeeListScreen> {
                 tag: 'avatar_${employee.id}',
                 child: CircleAvatar(
                   radius: 30,
-                  backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                  backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
                   child: Text(
                     employee.firstName[0] + employee.lastName[0],
                     style: const TextStyle(
@@ -147,7 +147,7 @@ class _EmployeeListScreenState extends State<EmployeeListScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: AppTheme.accentColor.withOpacity(0.1),
+                            color: AppTheme.accentColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -164,7 +164,7 @@ class _EmployeeListScreenState extends State<EmployeeListScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: AppTheme.successColor.withOpacity(0.1),
+                              color: AppTheme.successColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: const Text(

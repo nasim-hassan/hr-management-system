@@ -154,7 +154,7 @@ class _EmployeeFormScreenState extends State<EmployeeFormScreen> {
                         borderSide: BorderSide(color: Colors.grey.shade300),
                       ),
                     ),
-                    value: _selectedDesignation,
+                    initialValue: _selectedDesignation,
                     items: Designation.values.map((d) {
                       return DropdownMenuItem(
                         value: d,
@@ -172,7 +172,7 @@ class _EmployeeFormScreenState extends State<EmployeeFormScreen> {
                     title: const Text('Active Status', style: TextStyle(fontWeight: FontWeight.bold)),
                     subtitle: Text(_isActive ? 'Employee has access to system' : 'Employee account is disabled'),
                     value: _isActive,
-                    activeColor: AppTheme.successColor,
+                    activeThumbColor: AppTheme.successColor,
                     onChanged: (val) {
                       setState(() => _isActive = val);
                     },

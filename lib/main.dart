@@ -43,7 +43,6 @@ class HRManagementApp extends ConsumerWidget {
         if (settings.name != null && settings.name!.startsWith('/employees/')) {
           final parts = settings.name!.split('/');
           if (parts.length == 3) {
-            final id = parts[2];
             // View details
             final args = settings.arguments as Employee?;
             if (args != null) {
@@ -128,7 +127,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
+                    color: Colors.black.withValues(alpha: 0.2),
                     blurRadius: 10,
                     offset: const Offset(0, 5),
                   ),

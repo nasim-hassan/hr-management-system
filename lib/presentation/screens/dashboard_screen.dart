@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:hr_management_system/config/app_routes.dart';
 import 'package:hr_management_system/data/models/mock_data.dart';
 
-/// Admin Dashboard Screen
+/// Admin Dashboard Screen - Professional with Analytics
 class AdminDashboardScreen extends StatelessWidget {
   const AdminDashboardScreen({super.key});
 
@@ -16,59 +17,65 @@ class AdminDashboardScreen extends StatelessWidget {
           children: [
             // Welcome Header
             Container(
-              color: Colors.blue.shade50,
-              padding: const EdgeInsets.all(16),
-              child: Column(
+              width: double.infinity,
+              margin: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Welcome, Nasim Hassan',
+                  Text(
+                    'Welcome, Lamia Lamu',
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8),
                   Text(
                     'HR Administrator',
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey.shade600,
+                      color: Colors.grey,
                     ),
                   ),
                 ],
               ),
             ),
 
-            // Statistics Cards
+            // Statistics Cards - 2x2 Grid
             Padding(
               padding: const EdgeInsets.all(16),
               child: GridView.count(
                 crossAxisCount: 2,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 2.2, // wide cards
                 children: [
-                  _StatCard(
+                  _SmallStatCard(
                     title: 'Total Employees',
                     value: stats['totalEmployees'].toString(),
                     icon: Icons.people,
                     color: Colors.blue,
                   ),
-                  _StatCard(
+                  _SmallStatCard(
                     title: 'Attendance Today',
                     value: stats['attendanceToday'].toString(),
                     icon: Icons.check_circle,
                     color: Colors.green,
                   ),
-                  _StatCard(
+                  _SmallStatCard(
                     title: 'Pending Leaves',
                     value: stats['pendingLeaveRequests'].toString(),
                     icon: Icons.calendar_month,
                     color: Colors.orange,
                   ),
-                  _StatCard(
+                  _SmallStatCard(
                     title: 'Pending Payrolls',
                     value: stats['pendingPayrolls'].toString(),
                     icon: Icons.payments,
@@ -78,9 +85,169 @@ class AdminDashboardScreen extends StatelessWidget {
               ),
             ),
 
+            // Analytics Section Header
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  const Text(
+                    'Analytics Overview',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Spacer(),
+                  Chip(
+                    label: const Text('This Week'),
+                    backgroundColor: Colors.grey.shade200,
+                  ),
+                ],
+              ),
+            ),
+
+            // Attendance Trend Chart
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Card(
+                elevation: 2,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Attendance Trend',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        height: 180,
+                        child: LineChart(
+                          LineChartData(
+                            gridData: const FlGridData(show: true),
+                            titlesData: FlTitlesData(
+                              rightTitles: const AxisTitles(
+                                sideTitles: SideTitles(showTitles: false),
+                              ),
+                              topTitles: const AxisTitles(
+                                sideTitles: SideTitles(showTitles: false),
+                              ),
+                              bottomTitles: AxisTitles(
+                                sideTitles: SideTitles(
+                                  showTitles: true,
+                                  getTitlesWidget: (value, meta) {
+                                    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                                    return Text(
+                                      days[value.toInt() % 7],
+                                      style: const TextStyle(fontSize: 12),
+                                    );
+                                  },
+                                  reservedSize: 30,
+                                ),
+                              ),
+                            ),
+                            borderData: FlBorderData(show: false),
+                            lineBarsData: [
+                              LineChartBarData(
+                                spots: const [
+                                  FlSpot(0, 8),
+                                  FlSpot(1, 7),
+                                  FlSpot(2, 9),
+                                  FlSpot(3, 6),
+                                  FlSpot(4, 8),
+                                  FlSpot(5, 5),
+                                  FlSpot(6, 7),
+                                ],
+                                isCurved: true,
+                                color: Colors.blue,
+                                barWidth: 3,
+                                dotData: const FlDotData(show: true),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // Leave Distribution Pie Chart
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Card(
+                elevation: 2,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Leave Distribution',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        height: 200,
+                        child: PieChart(
+                          PieChartData(
+                            sections: [
+                              PieChartSectionData(
+                                value: 60,
+                                color: Colors.green,
+                                title: 'Present\n(60%)',
+                                radius: 50,
+                                titleStyle: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              PieChartSectionData(
+                                value: 25,
+                                color: Colors.orange,
+                                title: 'On Leave\n(25%)',
+                                radius: 50,
+                                titleStyle: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              PieChartSectionData(
+                                value: 15,
+                                color: Colors.red,
+                                title: 'Absent\n(15%)',
+                                radius: 50,
+                                titleStyle: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                            sectionsSpace: 2,
+                            centerSpaceRadius: 40,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
             // Quick Actions
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -95,16 +262,12 @@ class AdminDashboardScreen extends StatelessWidget {
                   _QuickActionButton(
                     icon: Icons.people,
                     label: 'Employee Directory',
-                    onTap: () {
-                      Navigator.pushNamed(context, AppRoutes.employees);
-                    },
+                    onTap: () => Navigator.pushNamed(context, AppRoutes.employees),
                   ),
                   _QuickActionButton(
                     icon: Icons.person_add,
                     label: 'Add Employee',
-                    onTap: () {
-                      Navigator.pushNamed(context, AppRoutes.editEmployee.replaceAll(':id', 'new'));
-                    },
+                    onTap: () {},
                   ),
                   _QuickActionButton(
                     icon: Icons.assignment,
@@ -119,6 +282,7 @@ class AdminDashboardScreen extends StatelessWidget {
                 ],
               ),
             ),
+
             const SizedBox(height: 24),
           ],
         ),
@@ -143,24 +307,29 @@ class ManagerDashboardScreen extends StatelessWidget {
           children: [
             // Welcome Header
             Container(
-              color: Colors.green.shade50,
-              padding: const EdgeInsets.all(16),
-              child: Column(
+              width: double.infinity,
+              margin: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Welcome, Priya Sharma',
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8),
                   Text(
                     'Team Manager',
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey.shade600,
+                      color: Colors.grey,
                     ),
                   ),
                 ],
@@ -170,17 +339,22 @@ class ManagerDashboardScreen extends StatelessWidget {
             // Team Stats
             Padding(
               padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  _StatCard(
+              child: GridView.count(
+                crossAxisCount: 2,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 2.2,
+                children: const [
+                  _SmallStatCard(
                     title: 'Team Members',
                     value: '3',
                     icon: Icons.group,
                     color: Colors.blue,
                   ),
-                  const SizedBox(height: 16),
-                  _StatCard(
-                    title: 'Leave Requests to Approve',
+                  _SmallStatCard(
+                    title: 'Leave Requests',
                     value: '2',
                     icon: Icons.pending_actions,
                     color: Colors.orange,
@@ -203,38 +377,32 @@ class ManagerDashboardScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  ..._buildTeamAttendanceList(),
+                  ...MockDataProvider.mockEmployees
+                      .map(
+                        (emp) => Card(
+                          child: ListTile(
+                            leading: const CircleAvatar(
+                              child: Icon(Icons.person),
+                            ),
+                            title: Text(emp.fullName),
+                            subtitle: Text(emp.designation.displayName),
+                            trailing: const Chip(
+                              label: Text('Present'),
+                              backgroundColor: Colors.green,
+                              labelStyle: TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      ),
                 ],
               ),
             ),
+
             const SizedBox(height: 24),
           ],
         ),
       ),
     );
-  }
-
-  List<Widget> _buildTeamAttendanceList() {
-    final employees = MockDataProvider.mockEmployees;
-    return employees
-        .map(
-          (emp) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: ListTile(
-              leading: const CircleAvatar(
-                child: Icon(Icons.person),
-              ),
-              title: Text(emp.fullName),
-              subtitle: Text(emp.designation.displayName),
-              trailing: const Chip(
-                label: Text('Present'),
-                backgroundColor: Colors.green,
-                labelStyle: TextStyle(color: Colors.white),
-              ),
-            ),
-          ),
-        )
-        .toList();
   }
 }
 
@@ -258,8 +426,13 @@ class EmployeeDashboardScreen extends StatelessWidget {
           children: [
             // Welcome Header
             Container(
-              color: Colors.purple.shade50,
-              padding: const EdgeInsets.all(16),
+              width: double.infinity,
+              margin: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.purple.shade50,
+                borderRadius: BorderRadius.circular(16),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -273,9 +446,9 @@ class EmployeeDashboardScreen extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     employee.designation.displayName,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 14,
-                      color: Colors.grey.shade600,
+                      color: Colors.grey,
                     ),
                   ),
                 ],
@@ -285,16 +458,21 @@ class EmployeeDashboardScreen extends StatelessWidget {
             // Quick Info
             Padding(
               padding: const EdgeInsets.all(16),
-              child: Column(
+              child: GridView.count(
+                crossAxisCount: 2,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 2.2,
                 children: [
-                  _StatCard(
+                  _SmallStatCard(
                     title: 'Department',
                     value: employee.department,
                     icon: Icons.domain,
                     color: Colors.blue,
                   ),
-                  const SizedBox(height: 16),
-                  _StatCard(
+                  _SmallStatCard(
                     title: 'Recent Attendance',
                     value: '${recentAttendance.length} Records',
                     icon: Icons.calendar_today,
@@ -341,6 +519,7 @@ class EmployeeDashboardScreen extends StatelessWidget {
                 ],
               ),
             ),
+
             const SizedBox(height: 24),
           ],
         ),
@@ -349,14 +528,16 @@ class EmployeeDashboardScreen extends StatelessWidget {
   }
 }
 
-// Helper Widgets
-class _StatCard extends StatelessWidget {
+// ============ Helper Widgets ============
+
+/// Small Stat Card Widget - Grid Layout with Icon Alongside
+class _SmallStatCard extends StatelessWidget {
   final String title;
   final String value;
   final IconData icon;
   final Color color;
 
-  const _StatCard({
+  const _SmallStatCard({
     required this.title,
     required this.value,
     required this.icon,
@@ -366,44 +547,51 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: color.withOpacity(0.3),
+          color: color.withValues(alpha: 0.3),
           width: 1,
         ),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
+              color: color.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: color, size: 24),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey,
-                  ),
-                ),
-                const SizedBox(height: 4),
                 Text(
                   value,
                   style: const TextStyle(
-                    fontSize: 20,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Colors.black54,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -414,6 +602,7 @@ class _StatCard extends StatelessWidget {
   }
 }
 
+/// Quick Action Button Widget
 class _QuickActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -427,32 +616,31 @@ class _QuickActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(8),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                Icon(icon, color: Colors.blue),
-                const SizedBox(width: 12),
-                Text(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: Colors.blue),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
                   label,
                   style: const TextStyle(fontSize: 14),
                 ),
-                const Spacer(),
-                Icon(Icons.arrow_forward_ios,
-                    size: 14, color: Colors.grey.shade400),
-              ],
-            ),
+              ),
+              Icon(Icons.arrow_forward_ios,
+                  size: 14, color: Colors.grey.shade400),
+            ],
           ),
         ),
       ),
