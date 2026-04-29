@@ -146,3 +146,43 @@ enum Designation {
 
   String toStringValue() => name;
 }
+
+/// Report Type
+enum ReportType {
+  attendance('Attendance Report'),
+  payroll('Payroll Report'),
+  employee('Employee Report'),
+  performance('Performance Report'),
+  other('Other Report');
+
+  final String displayName;
+  const ReportType(this.displayName);
+
+  static ReportType fromString(String value) {
+    return ReportType.values.firstWhere(
+      (type) => type.name == value,
+      orElse: () => ReportType.other,
+    );
+  }
+
+  String toStringValue() => name;
+}
+
+/// Report Status
+enum ReportStatus {
+  pending('Pending'),
+  generated('Generated'),
+  failed('Failed');
+
+  final String displayName;
+  const ReportStatus(this.displayName);
+
+  static ReportStatus fromString(String value) {
+    return ReportStatus.values.firstWhere(
+      (status) => status.name == value,
+      orElse: () => ReportStatus.pending,
+    );
+  }
+
+  String toStringValue() => name;
+}

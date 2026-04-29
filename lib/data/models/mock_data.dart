@@ -6,6 +6,7 @@ import 'package:hr_management_system/data/models/leave_request_model.dart';
 import 'package:hr_management_system/data/models/payroll_model.dart';
 import 'package:hr_management_system/data/models/performance_review_model.dart';
 import 'package:hr_management_system/data/models/notification_model.dart';
+import 'package:hr_management_system/data/models/report_model.dart';
 
 /// Mock Data Provider - Contains test data for all models
 class MockDataProvider {
@@ -464,6 +465,43 @@ class MockDataProvider {
     ),
   ];
 
+  // ==================== MOCK REPORTS ====================
+  static final List<Report> mockReports = [
+    Report(
+      id: 'report_1',
+      title: 'April 2024 Attendance Summary',
+      description: 'Monthly attendance report for all employees including leaves and half-days.',
+      type: ReportType.attendance,
+      generatedBy: 'user_1',
+      status: ReportStatus.generated,
+      dateRangeStart: DateTime(2024, 4, 1),
+      dateRangeEnd: DateTime(2024, 4, 30),
+      fileUrl: 'https://storage.example.com/reports/attendance_apr_2024.pdf',
+      createdAt: DateTime(2024, 5, 1, 9, 0),
+    ),
+    Report(
+      id: 'report_2',
+      title: 'Q1 2024 Payroll Export',
+      description: 'Complete payroll export for accounting department.',
+      type: ReportType.payroll,
+      generatedBy: 'user_1',
+      status: ReportStatus.generated,
+      dateRangeStart: DateTime(2024, 1, 1),
+      dateRangeEnd: DateTime(2024, 3, 31),
+      fileUrl: 'https://storage.example.com/reports/payroll_q1_2024.csv',
+      createdAt: DateTime(2024, 4, 5, 14, 30),
+    ),
+    Report(
+      id: 'report_3',
+      title: 'Employee Headcount Report',
+      description: 'Current employee headcount by department and designation.',
+      type: ReportType.employee,
+      generatedBy: 'user_2',
+      status: ReportStatus.pending,
+      createdAt: DateTime.now().subtract(const Duration(hours: 2)),
+    ),
+  ];
+
   // ==================== STATIC METHODS ====================
 
   /// Get all mock data
@@ -476,6 +514,7 @@ class MockDataProvider {
       'payroll': mockPayroll,
       'performanceReviews': mockPerformanceReviews,
       'notifications': mockNotifications,
+      'reports': mockReports,
     };
   }
 

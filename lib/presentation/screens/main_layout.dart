@@ -4,6 +4,8 @@ import 'package:hr_management_system/presentation/screens/dashboard_screen.dart'
 import 'package:hr_management_system/presentation/screens/employee_list_screen.dart';
 import 'package:hr_management_system/presentation/screens/attendance_list_screen.dart';
 import 'package:hr_management_system/presentation/screens/leave_request_list_screen.dart';
+import 'package:hr_management_system/presentation/screens/payroll_list_screen.dart';
+import 'package:hr_management_system/presentation/screens/report_list_screen.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -20,8 +22,8 @@ class _MainLayoutState extends State<MainLayout> {
     const EmployeeListScreen(),
     const AttendanceListScreen(),
     const LeaveRequestListScreen(),
-    const _PlaceholderScreen(title: 'Payroll', icon: Icons.payments),
-    const _PlaceholderScreen(title: 'Reports', icon: Icons.bar_chart),
+    const PayrollListScreen(),
+    const ReportListScreen(),
   ];
 
   final List<_SidebarItem> _menuItems = [
