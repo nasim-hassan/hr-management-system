@@ -4,12 +4,21 @@ import 'environment.dart';
 class SupabaseConfig {
   static Future<void> initialize() async {
     try {
+      print('🔧 [SUPABASE] Initializing Supabase...');
+      print('🔧 [SUPABASE] URL: ${Environment.supabaseUrl}');
+      print('🔧 [SUPABASE] Anon Key exists: ${Environment.supabaseAnonKey.isNotEmpty}');
+      print('🔧 [SUPABASE] Debug mode: ${Environment.enableDebugMode}');
+      
       await Supabase.initialize(
         url: Environment.supabaseUrl,
         anonKey: Environment.supabaseAnonKey,
         debug: Environment.enableDebugMode,
       );
+      
+      print('✅ [SUPABASE] Initialization successful');
+      print('✅ [SUPABASE] Auth endpoint ready');
     } catch (e) {
+      print('❌ [SUPABASE] Initialization failed: $e');
       throw SupabaseConfigException('Failed to initialize Supabase: $e');
     }
   }

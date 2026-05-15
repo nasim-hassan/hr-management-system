@@ -15,6 +15,12 @@ class AppRoutes {
   static const String employeeDetails = '/employees/:id';
   static const String editEmployee = '/employees/:id/edit';
 
+  // User Management Routes
+  static const String users = '/users';
+  static const String addUser = '/users/add';
+  static const String userDetails = '/users/:id';
+  static const String editUser = '/users/:id/edit';
+
   // Attendance Routes
   static const String attendance = '/attendance';
   static const String attendanceHistory = '/attendance/history';

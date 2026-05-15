@@ -28,7 +28,7 @@ class AdminDashboardScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Welcome, Lamia Lamu',
+                    'Welcome, Nasim Hassan',
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -318,7 +318,7 @@ class ManagerDashboardScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Welcome, Priya Sharma',
+                    'Welcome, Ramim Rashid',
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -437,7 +437,7 @@ class EmployeeDashboardScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Welcome, Amit Patel',
+                    'Welcome, Emon Khan',
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
