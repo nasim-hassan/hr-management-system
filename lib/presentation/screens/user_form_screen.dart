@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hr_management_system/core/theme/app_theme.dart';
 import 'package:hr_management_system/data/models/user_model.dart';
-import 'package:hr_management_system/data/models/mock_data.dart';
+import 'package:hr_management_system/data/providers/user_provider.dart';
 import 'package:hr_management_system/core/enums/app_enums.dart';
 
-class UserFormScreen extends StatefulWidget {
+class UserFormScreen extends ConsumerStatefulWidget {
   final User? user; // If null, it's Add Mode. If provided, Edit Mode.
 
   const UserFormScreen({super.key, this.user});
 
   @override
-  State<UserFormScreen> createState() => _UserFormScreenState();
+  ConsumerState<UserFormScreen> createState() => _UserFormScreenState();
 }
 
-class _UserFormScreenState extends State<UserFormScreen> {
+class _UserFormScreenState extends ConsumerState<UserFormScreen> {
   final _formKey = GlobalKey<FormState>();
 
   late TextEditingController _emailController;
@@ -26,6 +27,7 @@ class _UserFormScreenState extends State<UserFormScreen> {
   bool _isActive = true;
   bool _showPassword = false;
   bool _showConfirmPassword = false;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -52,7 +54,7 @@ class _UserFormScreenState extends State<UserFormScreen> {
     super.dispose();
   }
 
-  void _saveUser() {
+  void _saveUser() async {
     if (_formKey.currentState!.validate()) {
       final isAdd = widget.user == null;
 
@@ -67,48 +69,55 @@ class _UserFormScreenState extends State<UserFormScreen> {
         return;
       }
 
-      // Create/Update User object
-      final updatedUser = widget.user?.copyWith(
-            email: _emailController.text,
-            fullName: _fullNameController.text,
-            phoneNumber: _phoneController.text,
-            role: _selectedRole,
-            isActive: _isActive,
-            updatedAt: DateTime.now(),
-          ) ??
-          User(
-            id: 'user_${DateTime.now().millisecondsSinceEpoch}',
-            email: _emailController.text,
-            fullName: _fullNameController.text,
-            phoneNumber: _phoneController.text,
-            role: _selectedRole,
-            isActive: _isActive,
-            createdAt: DateTime.now(),
-          );
+      setState(() => _isSaving = true);
 
-      // Save to mock dataset
+      bool success = false;
       if (isAdd) {
-        MockDataProvider.mockUsers.add(updatedUser);
+        success = await ref.read(userProvider.notifier).addUser(
+          email: _emailController.text,
+          password: _passwordController.text,
+          fullName: _fullNameController.text,
+          role: _selectedRole,
+          phoneNumber: _phoneController.text.isNotEmpty ? _phoneController.text : null,
+        );
       } else {
-        final index = MockDataProvider.mockUsers.indexWhere((u) => u.id == widget.user!.id);
-        if (index != -1) {
-          MockDataProvider.mockUsers[index] = updatedUser;
-        }
+        final updatedUser = widget.user!.copyWith(
+          email: _emailController.text,
+          fullName: _fullNameController.text,
+          phoneNumber: _phoneController.text,
+          role: _selectedRole,
+          isActive: _isActive,
+          updatedAt: DateTime.now(),
+        );
+        success = await ref.read(userProvider.notifier).updateUser(updatedUser);
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            isAdd
-                ? '${_fullNameController.text} added successfully'
-                : 'User updated successfully',
-          ),
-          backgroundColor: AppTheme.successColor,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      if (!mounted) return;
+      setState(() => _isSaving = false);
 
-      Navigator.pop(context);
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              isAdd
+                  ? '${_fullNameController.text} added successfully'
+                  : 'User updated successfully',
+            ),
+            backgroundColor: AppTheme.successColor,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        Navigator.pop(context);
+      } else {
+        final error = ref.read(userProvider).error ?? 'Operation failed';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $error'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
@@ -290,7 +299,7 @@ class _UserFormScreenState extends State<UserFormScreen> {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: _isSaving ? null : () => Navigator.pop(context),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         side: const BorderSide(color: AppTheme.primaryColor),
@@ -310,7 +319,7 @@ class _UserFormScreenState extends State<UserFormScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: _saveUser,
+                      onPressed: _isSaving ? null : _saveUser,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryColor,
                         padding: const EdgeInsets.symmetric(vertical: 12),
@@ -318,13 +327,22 @@ class _UserFormScreenState extends State<UserFormScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      child: Text(
-                        isEdit ? 'Update User' : 'Add User',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      child: _isSaving
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : Text(
+                              isEdit ? 'Update User' : 'Add User',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                     ),
                   ),
                 ],

@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hr_management_system/core/theme/app_theme.dart';
 import 'package:hr_management_system/data/models/attendance_model.dart';
-import 'package:hr_management_system/data/models/mock_data.dart';
+import 'package:hr_management_system/data/providers/employee_provider.dart';
 import 'package:hr_management_system/core/enums/app_enums.dart';
 
-class AttendanceFormScreen extends StatefulWidget {
+class AttendanceFormScreen extends ConsumerStatefulWidget {
   final Attendance? attendance; // If null, Add Mode. If provided, Edit Mode.
 
   const AttendanceFormScreen({super.key, this.attendance});
 
   @override
-  State<AttendanceFormScreen> createState() => _AttendanceFormScreenState();
+  ConsumerState<AttendanceFormScreen> createState() => _AttendanceFormScreenState();
 }
 
-class _AttendanceFormScreenState extends State<AttendanceFormScreen> {
+class _AttendanceFormScreenState extends ConsumerState<AttendanceFormScreen> {
   final _formKey = GlobalKey<FormState>();
   
   String? _selectedEmployeeId;
@@ -37,10 +38,6 @@ class _AttendanceFormScreenState extends State<AttendanceFormScreen> {
       }
       if (widget.attendance!.checkOutTime != null) {
         _checkOutTime = TimeOfDay.fromDateTime(widget.attendance!.checkOutTime!);
-      }
-    } else {
-      if (MockDataProvider.mockEmployees.isNotEmpty) {
-        _selectedEmployeeId = MockDataProvider.mockEmployees.first.id;
       }
     }
   }
@@ -122,6 +119,19 @@ class _AttendanceFormScreenState extends State<AttendanceFormScreen> {
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.attendance != null;
+    final employeeState = ref.watch(employeeProvider);
+    
+    // Set first employee as default on first build if not in edit mode
+    if (!isEdit && _selectedEmployeeId == null && employeeState.employees.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _selectedEmployeeId = employeeState.employees.first.id;
+          });
+        }
+      });
+    }
+
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
@@ -137,167 +147,211 @@ class _AttendanceFormScreenState extends State<AttendanceFormScreen> {
           ),
         ),
       ),
-      body: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildSectionCard(
-                title: 'Attendance Details',
-                children: [
-                  DropdownButtonFormField<String>(
-                    decoration: InputDecoration(
-                      labelText: 'Employee',
-                      prefixIcon: const Icon(Icons.person, color: AppTheme.primaryColor),
-                      filled: true,
-                      fillColor: Colors.grey.shade50,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                    ),
-                    initialValue: _selectedEmployeeId,
-                    items: MockDataProvider.mockEmployees.map((e) {
-                      return DropdownMenuItem(
-                        value: e.id,
-                        child: Text(e.fullName),
-                      );
-                    }).toList(),
-                    onChanged: isEdit ? null : (val) {
-                      setState(() {
-                        if (val != null) _selectedEmployeeId = val;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  InkWell(
-                    onTap: () => _selectDate(context),
-                    child: InputDecorator(
-                      decoration: InputDecoration(
-                        labelText: 'Date',
-                        prefixIcon: const Icon(Icons.calendar_today, color: AppTheme.primaryColor),
-                        filled: true,
-                        fillColor: Colors.grey.shade50,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
-                        ),
-                      ),
-                      child: Text(
-                        _selectedDate.toIso8601String().split('T')[0],
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
+      body: employeeState.isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : employeeState.error != null
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Expanded(
-                        child: InkWell(
-                          onTap: () => _selectTime(context, true),
-                          child: InputDecorator(
-                            decoration: InputDecoration(
-                              labelText: 'Check In Time',
-                              prefixIcon: const Icon(Icons.access_time, color: Colors.green),
-                              filled: true,
-                              fillColor: Colors.grey.shade50,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: Text(
-                              _checkInTime != null 
-                                ? '${_checkInTime!.hour.toString().padLeft(2, '0')}:${_checkInTime!.minute.toString().padLeft(2, '0')}'
-                                : 'Not Set',
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: InkWell(
-                          onTap: () => _selectTime(context, false),
-                          child: InputDecorator(
-                            decoration: InputDecoration(
-                              labelText: 'Check Out Time',
-                              prefixIcon: const Icon(Icons.access_time, color: Colors.red),
-                              filled: true,
-                              fillColor: Colors.grey.shade50,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: Text(
-                              _checkOutTime != null 
-                                ? '${_checkOutTime!.hour.toString().padLeft(2, '0')}:${_checkOutTime!.minute.toString().padLeft(2, '0')}'
-                                : 'Not Set',
-                            ),
-                          ),
-                        ),
+                      const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                      const SizedBox(height: 16),
+                      Text('Error: ${employeeState.error}'),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () {
+                          ref.invalidate(employeeProvider);
+                        },
+                        child: const Text('Retry'),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<AttendanceStatus>(
-                    decoration: InputDecoration(
-                      labelText: 'Status',
-                      prefixIcon: const Icon(Icons.fact_check, color: AppTheme.primaryColor),
-                      filled: true,
-                      fillColor: Colors.grey.shade50,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
+                )
+              : Form(
+                  key: _formKey,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _buildSectionCard(
+                          title: 'Attendance Details',
+                          children: [
+                            DropdownButtonFormField<String>(
+                              decoration: InputDecoration(
+                                labelText: 'Employee',
+                                prefixIcon: const Icon(Icons.person, color: AppTheme.primaryColor),
+                                filled: true,
+                                fillColor: Colors.grey.shade50,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: Colors.grey.shade300),
+                                ),
+                              ),
+                              initialValue: _selectedEmployeeId,
+                              items: employeeState.employees.map((e) {
+                                return DropdownMenuItem(
+                                  value: e.id,
+                                  child: Text(e.fullName),
+                                );
+                              }).toList(),
+                              onChanged: isEdit ? null : (val) {
+                                setState(() {
+                                  if (val != null) _selectedEmployeeId = val;
+                                });
+                              },
+                            ),
+                            DropdownButtonFormField<String>(
+                              decoration: InputDecoration(
+                                labelText: 'Employee',
+                                prefixIcon: const Icon(Icons.person, color: AppTheme.primaryColor),
+                                filled: true,
+                                fillColor: Colors.grey.shade50,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: Colors.grey.shade300),
+                                ),
+                              ),
+                              initialValue: _selectedEmployeeId,
+                              items: employeeState.employees.map((e) {
+                                return DropdownMenuItem(
+                                  value: e.id,
+                                  child: Text(e.fullName),
+                                );
+                              }).toList(),
+                              onChanged: isEdit ? null : (val) {
+                                setState(() {
+                                  if (val != null) _selectedEmployeeId = val;
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                            InkWell(
+                              onTap: () => _selectDate(context),
+                              child: InputDecorator(
+                                decoration: InputDecoration(
+                                  labelText: 'Date',
+                                  prefixIcon: const Icon(Icons.calendar_today, color: AppTheme.primaryColor),
+                                  filled: true,
+                                  fillColor: Colors.grey.shade50,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(color: Colors.grey.shade300),
+                                  ),
+                                ),
+                                child: Text(
+                                  _selectedDate.toIso8601String().split('T')[0],
+                                  style: const TextStyle(fontSize: 16),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: InkWell(
+                                    onTap: () => _selectTime(context, true),
+                                    child: InputDecorator(
+                                      decoration: InputDecoration(
+                                        labelText: 'Check In Time',
+                                        prefixIcon: const Icon(Icons.access_time, color: Colors.green),
+                                        filled: true,
+                                        fillColor: Colors.grey.shade50,
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        _checkInTime != null 
+                                          ? '${_checkInTime!.hour.toString().padLeft(2, '0')}:${_checkInTime!.minute.toString().padLeft(2, '0')}'
+                                          : 'Not Set',
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: InkWell(
+                                    onTap: () => _selectTime(context, false),
+                                    child: InputDecorator(
+                                      decoration: InputDecoration(
+                                        labelText: 'Check Out Time',
+                                        prefixIcon: const Icon(Icons.access_time, color: Colors.red),
+                                        filled: true,
+                                        fillColor: Colors.grey.shade50,
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        _checkOutTime != null 
+                                          ? '${_checkOutTime!.hour.toString().padLeft(2, '0')}:${_checkOutTime!.minute.toString().padLeft(2, '0')}'
+                                          : 'Not Set',
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            DropdownButtonFormField<AttendanceStatus>(
+                              decoration: InputDecoration(
+                                labelText: 'Status',
+                                prefixIcon: const Icon(Icons.fact_check, color: AppTheme.primaryColor),
+                                filled: true,
+                                fillColor: Colors.grey.shade50,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: Colors.grey.shade300),
+                                ),
+                              ),
+                              initialValue: _selectedStatus,
+                              items: AttendanceStatus.values.map((s) {
+                                return DropdownMenuItem(
+                                  value: s,
+                                  child: Text(s.displayName),
+                                );
+                              }).toList(),
+                              onChanged: (val) {
+                                setState(() {
+                                  if (val != null) _selectedStatus = val;
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _notesController,
+                              maxLines: 3,
+                              decoration: InputDecoration(
+                                labelText: 'Notes (Optional)',
+                                prefixIcon: const Icon(Icons.notes, color: AppTheme.primaryColor),
+                                filled: true,
+                                fillColor: Colors.grey.shade50,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: Colors.grey.shade300),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 32),
+                        ElevatedButton(
+                          onPressed: _saveAttendance,
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            backgroundColor: AppTheme.primaryColor,
+                          ),
+                          child: Text(
+                            isEdit ? 'Update Record' : 'Save Record',
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                          ),
+                        ),
+                      ],
                     ),
-                    initialValue: _selectedStatus,
-                    items: AttendanceStatus.values.map((s) {
-                      return DropdownMenuItem(
-                        value: s,
-                        child: Text(s.displayName),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      setState(() {
-                        if (val != null) _selectedStatus = val;
-                      });
-                    },
                   ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _notesController,
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      labelText: 'Notes (Optional)',
-                      prefixIcon: const Icon(Icons.notes, color: AppTheme.primaryColor),
-                      filled: true,
-                      fillColor: Colors.grey.shade50,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 32),
-              ElevatedButton(
-                onPressed: _saveAttendance,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  backgroundColor: AppTheme.primaryColor,
                 ),
-                child: Text(
-                  isEdit ? 'Update Record' : 'Save Record',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 

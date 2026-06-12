@@ -37,29 +37,43 @@ class Attendance {
   }
 
   factory Attendance.fromJson(Map<String, dynamic> json) {
+    // Helper to parse DATE or TIMESTAMP fields
+    DateTime _parseDateTime(dynamic value) {
+      if (value == null) return DateTime.now();
+      if (value is String) {
+        try {
+          // Handle DATE format (YYYY-MM-DD)
+          if (value.length == 10 && !value.contains('T')) {
+            return DateTime.parse('${value}T00:00:00Z');
+          }
+          // Handle TIMESTAMP format
+          return DateTime.parse(value);
+        } catch (e) {
+          return DateTime.now();
+        }
+      }
+      return DateTime.now();
+    }
+
     return Attendance(
       id: json['id'] ?? '',
       employeeId: json['employee_id'] ?? '',
-      date: json['date'] != null
-          ? DateTime.parse(json['date'])
-          : DateTime.now(),
+      date: _parseDateTime(json['date']),
       checkInTime: json['check_in_time'] != null
-          ? DateTime.parse(json['check_in_time'])
+          ? _parseDateTime(json['check_in_time'])
           : null,
       checkOutTime: json['check_out_time'] != null
-          ? DateTime.parse(json['check_out_time'])
+          ? _parseDateTime(json['check_out_time'])
           : null,
       status: AttendanceStatus.fromString(
           json['status'] ?? AttendanceStatus.absent.toStringValue()),
       notes: json['notes'],
       location: json['location'],
-      latitude: json['latitude'],
-      longitude: json['longitude'],
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
-          : DateTime.now(),
+      latitude: json['latitude'] != null ? (json['latitude'] as num).toDouble() : null,
+      longitude: json['longitude'] != null ? (json['longitude'] as num).toDouble() : null,
+      createdAt: _parseDateTime(json['created_at']),
       updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'])
+          ? _parseDateTime(json['updated_at'])
           : null,
     );
   }

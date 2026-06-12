@@ -133,7 +133,7 @@ class AuthService {
   }
 
   /// Sign up new user (for registration if needed)
-  static Future<bool> signUp({
+  static Future<String?> signUp({
     required String email,
     required String password,
   }) async {
@@ -143,7 +143,7 @@ class AuthService {
         password: password,
       );
 
-      return response.user != null;
+      return response.user?.id;
     } catch (e) {
       throw AuthException('Sign up failed: ${e.toString()}');
     }

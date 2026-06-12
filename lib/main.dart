@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'config/supabase_config.dart';
 import 'core/theme/app_theme.dart';
 import 'config/app_routes.dart';
+import 'data/services/debug_service.dart';
 import 'presentation/screens/main_layout.dart';
 import 'presentation/screens/splash_screen.dart';
 import 'presentation/screens/login_screen.dart';
@@ -22,6 +23,9 @@ void main() async {
 
   // Initialize Supabase
   await SupabaseConfig.initialize();
+  
+  // Debug: Test Supabase connection and tables
+  await DebugService.testSupabaseConnection();
 
   runApp(
     const ProviderScope(

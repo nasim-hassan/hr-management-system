@@ -1,23 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hr_management_system/config/app_routes.dart';
 import 'package:hr_management_system/core/theme/app_theme.dart';
 import 'package:hr_management_system/data/models/employee_model.dart';
-import 'package:hr_management_system/data/models/mock_data.dart';
+import 'package:hr_management_system/data/providers/employee_provider.dart';
 
-class EmployeeListScreen extends StatefulWidget {
+class EmployeeListScreen extends ConsumerStatefulWidget {
   const EmployeeListScreen({super.key});
 
   @override
-  State<EmployeeListScreen> createState() => _EmployeeListScreenState();
+  ConsumerState<EmployeeListScreen> createState() => _EmployeeListScreenState();
 }
 
-class _EmployeeListScreenState extends State<EmployeeListScreen> {
-  final List<Employee> _employees = MockDataProvider.mockEmployees;
+class _EmployeeListScreenState extends ConsumerState<EmployeeListScreen> {
   String _searchQuery = '';
 
-  List<Employee> get _filteredEmployees {
-    if (_searchQuery.isEmpty) return _employees;
-    return _employees.where((emp) {
+  List<Employee> _getFilteredEmployees(List<Employee> employees) {
+    if (_searchQuery.isEmpty) return employees;
+    return employees.where((emp) {
       return emp.fullName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           emp.department.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           emp.designation.displayName.toLowerCase().contains(_searchQuery.toLowerCase());
@@ -27,6 +27,9 @@ class _EmployeeListScreenState extends State<EmployeeListScreen> {
   @override
   Widget build(BuildContext context) {
     final canPop = Navigator.canPop(context);
+    final employeeState = ref.watch(employeeProvider);
+    final filteredEmployees = _getFilteredEmployees(employeeState.employees);
+
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: canPop
@@ -72,21 +75,47 @@ class _EmployeeListScreenState extends State<EmployeeListScreen> {
 
           // Employee List
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _filteredEmployees.length,
-              itemBuilder: (context, index) {
-                final employee = _filteredEmployees[index];
-                return _buildEmployeeCard(context, employee);
-              },
-            ),
+            child: employeeState.isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(),
+                  )
+                : employeeState.error != null
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                            const SizedBox(height: 16),
+                            Text('Error: ${employeeState.error}'),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () {
+                                ref.invalidate(employeeProvider);
+                              },
+                              child: const Text('Retry'),
+                            ),
+                          ],
+                        ),
+                      )
+                    : filteredEmployees.isEmpty
+                        ? const Center(
+                            child: Text('No employees found'),
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: filteredEmployees.length,
+                            itemBuilder: (context, index) {
+                              final employee = filteredEmployees[index];
+                              return _buildEmployeeCard(context, employee, ref);
+                            },
+                          ),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
           await Navigator.pushNamed(context, AppRoutes.editEmployee.replaceAll(':id', 'new'));
-          setState(() {});
+          ref.invalidate(employeeProvider);
         },
         backgroundColor: AppTheme.primaryColor,
         icon: const Icon(Icons.add, color: Colors.white),
@@ -95,7 +124,7 @@ class _EmployeeListScreenState extends State<EmployeeListScreen> {
     );
   }
 
-  Widget _buildEmployeeCard(BuildContext context, Employee employee) {
+  Widget _buildEmployeeCard(BuildContext context, Employee employee, WidgetRef ref) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
@@ -108,7 +137,7 @@ class _EmployeeListScreenState extends State<EmployeeListScreen> {
             AppRoutes.employeeDetails.replaceAll(':id', employee.id),
             arguments: employee,
           );
-          setState(() {});
+          ref.invalidate(employeeProvider);
         },
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -150,6 +179,16 @@ class _EmployeeListScreenState extends State<EmployeeListScreen> {
                         color: AppTheme.textSecondaryColor,
                       ),
                     ),
+                    const SizedBox(height: 4),
+                    if (employee.salary != null)
+                      Text(
+                        'Salary: ₹${employee.salary}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.accentColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     const SizedBox(height: 8),
                     Row(
                       children: [

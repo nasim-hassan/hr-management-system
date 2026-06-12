@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hr_management_system/config/app_routes.dart';
 import 'package:hr_management_system/core/theme/app_theme.dart';
 import 'package:hr_management_system/data/models/user_model.dart';
-import 'package:hr_management_system/data/models/mock_data.dart';
+import 'package:hr_management_system/data/providers/user_provider.dart';
+import 'package:hr_management_system/data/services/user_profile_service.dart';
 import 'package:hr_management_system/core/enums/app_enums.dart';
 import 'package:intl/intl.dart';
 
-class UserDetailsScreen extends StatefulWidget {
+class UserDetailsScreen extends ConsumerStatefulWidget {
   final String userId;
   final User? user; // Optional pre-loaded user
 
@@ -17,67 +19,119 @@ class UserDetailsScreen extends StatefulWidget {
   });
 
   @override
-  State<UserDetailsScreen> createState() => _UserDetailsScreenState();
+  ConsumerState<UserDetailsScreen> createState() => _UserDetailsScreenState();
 }
 
-class _UserDetailsScreenState extends State<UserDetailsScreen> {
+class _UserDetailsScreenState extends ConsumerState<UserDetailsScreen> {
   late User _user;
-  final bool _isLoading = false;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _user = widget.user ?? _getMockUser(widget.userId);
+    _user = widget.user ?? User(
+      id: widget.userId,
+      email: '',
+      fullName: 'Loading...',
+      role: UserRole.employee,
+      isActive: true,
+      createdAt: DateTime.now(),
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadUser();
+    });
   }
 
-  User _getMockUser(String userId) {
-    final index = MockDataProvider.mockUsers.indexWhere((u) => u.id == userId);
+  Future<void> _loadUser() async {
+    final users = ref.read(userProvider).users;
+    final index = users.indexWhere((u) => u.id == widget.userId);
     if (index != -1) {
-      return MockDataProvider.mockUsers[index];
+      setState(() {
+        _user = users[index];
+      });
+      return;
     }
-    // Fallback if not found
-    final roleIndex = userId.hashCode % 3;
-    return User(
-      id: userId,
-      email: 'user${userId.hashCode % 100}@example.com',
-      fullName: 'User ${userId.hashCode % 100}',
-      role: roleIndex == 0
-          ? UserRole.hrAdmin
-          : roleIndex == 1
-              ? UserRole.manager
-              : UserRole.employee,
-      phoneNumber: '+880 1711 ${000 + (userId.hashCode % 900)}${0000 + (userId.hashCode % 9999)}',
-      isActive: userId.hashCode % 2 == 0,
-      createdAt: DateTime.now().subtract(Duration(days: userId.hashCode % 365)),
-      updatedAt: DateTime.now().subtract(Duration(days: userId.hashCode % 30)),
-    );
+
+    if (widget.user != null) {
+      setState(() {
+        _user = widget.user!;
+      });
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      final fetchedUser = await UserProfileService.fetchUserProfile(widget.userId);
+      if (fetchedUser != null) {
+        setState(() {
+          _user = fetchedUser;
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('User profile not found')),
+          );
+          Navigator.pop(context);
+        }
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading user: $e')),
+        );
+        Navigator.pop(context);
+      }
+    }
   }
 
   void _deleteUser() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Delete User'),
         content: Text(
           'Are you sure you want to permanently delete ${_user.email}? This action cannot be undone.',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // Delete from Mock list
-              MockDataProvider.mockUsers.removeWhere((u) => u.id == _user.id);
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${_user.email} deleted successfully'),
-                  backgroundColor: Colors.red,
-                ),
+                const SnackBar(content: Text('Deactivating user...')),
               );
-              Navigator.pop(context);
+
+              final success = await ref.read(userProvider.notifier).deleteUser(_user.id);
+              
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).clearSnackBars();
+
+              if (success) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('${_user.email} deleted successfully'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                Navigator.pop(context);
+              } else {
+                final error = ref.read(userProvider).error ?? 'Failed to delete user';
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error: $error'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             },
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
@@ -88,11 +142,11 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Read up-to-date user details from the mock database
-    _user = MockDataProvider.mockUsers.firstWhere(
-      (u) => u.id == widget.userId,
-      orElse: () => _user,
-    );
+    final users = ref.watch(userProvider).users;
+    final index = users.indexWhere((u) => u.id == widget.userId);
+    if (index != -1) {
+      _user = users[index];
+    }
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,

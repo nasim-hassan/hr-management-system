@@ -67,6 +67,25 @@ class Employee {
   String get fullName => '$firstName $lastName ($id)';
 
   factory Employee.fromJson(Map<String, dynamic> json) {
+    // Helper to parse DATE or TIMESTAMP fields
+    DateTime _parseDateTime(dynamic value, {bool isDate = false}) {
+      if (value == null) return DateTime.now();
+      if (value is String) {
+        try {
+          // Handle DATE format (YYYY-MM-DD)
+          if (value.length == 10 && !value.contains('T')) {
+            return DateTime.parse('${value}T00:00:00Z');
+          }
+          // Handle TIMESTAMP format
+          return DateTime.parse(value);
+        } catch (e) {
+          print('Failed to parse datetime: $value, error: $e');
+          return DateTime.now();
+        }
+      }
+      return DateTime.now();
+    }
+
     return Employee(
       id: json['id'] ?? '',
       userId: json['user_id'] ?? '',
@@ -79,14 +98,10 @@ class Employee {
       state: json['state'],
       zipCode: json['zip_code'],
       country: json['country'],
-      dateOfBirth: json['date_of_birth'] != null
-          ? DateTime.parse(json['date_of_birth'])
-          : DateTime.now(),
+      dateOfBirth: _parseDateTime(json['date_of_birth'], isDate: true),
       gender: json['gender'],
       maritalStatus: json['marital_status'],
-      dateOfJoining: json['date_of_joining'] != null
-          ? DateTime.parse(json['date_of_joining'])
-          : DateTime.now(),
+      dateOfJoining: _parseDateTime(json['date_of_joining']),
       designation:
           Designation.fromString(json['designation'] ?? 'intern'),
       department: json['department'] ?? '',
@@ -100,11 +115,9 @@ class Employee {
       emergencyContact: json['emergency_contact'],
       emergencyContactNumber: json['emergency_contact_number'],
       isActive: json['is_active'] ?? true,
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
-          : DateTime.now(),
+      createdAt: _parseDateTime(json['created_at']),
       updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'])
+          ? _parseDateTime(json['updated_at'])
           : null,
     );
   }

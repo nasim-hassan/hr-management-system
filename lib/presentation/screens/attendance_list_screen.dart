@@ -1,52 +1,56 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hr_management_system/core/theme/app_theme.dart';
 import 'package:hr_management_system/data/models/attendance_model.dart';
-import 'package:hr_management_system/data/models/mock_data.dart';
+import 'package:hr_management_system/data/models/employee_model.dart';
+import 'package:hr_management_system/data/providers/attendance_provider.dart';
+import 'package:hr_management_system/data/providers/employee_provider.dart';
+import 'package:hr_management_system/data/services/attendance_service.dart';
 import 'package:hr_management_system/presentation/screens/attendance_form_screen.dart';
+import 'package:hr_management_system/core/enums/app_enums.dart';
 
-class AttendanceListScreen extends StatefulWidget {
+class AttendanceListScreen extends ConsumerStatefulWidget {
   const AttendanceListScreen({super.key});
 
   @override
-  State<AttendanceListScreen> createState() => _AttendanceListScreenState();
+  ConsumerState<AttendanceListScreen> createState() => _AttendanceListScreenState();
 }
 
-class _AttendanceListScreenState extends State<AttendanceListScreen> {
-  late List<Attendance> _attendances;
+class _AttendanceListScreenState extends ConsumerState<AttendanceListScreen> {
   String _searchQuery = '';
 
-  @override
-  void initState() {
-    super.initState();
-    _attendances = List.from(MockDataProvider.mockAttendance);
-  }
-
-  List<Attendance> get _filteredAttendances {
-    if (_searchQuery.isEmpty) return _attendances;
-    return _attendances.where((att) {
-      final emp = MockDataProvider.mockEmployees.firstWhere(
+  List<Attendance> _getFilteredAttendances(List<Attendance> attendances, List<Employee> employees) {
+    if (_searchQuery.isEmpty) return attendances;
+    return attendances.where((att) {
+      final emp = employees.firstWhere(
         (e) => e.id == att.employeeId,
+        orElse: () => Employee(
+          id: '',
+          userId: '',
+          firstName: 'Unknown',
+          lastName: '',
+          email: '',
+          phoneNumber: '',
+          dateOfBirth: DateTime.now(),
+          dateOfJoining: DateTime.now(),
+          designation: Designation.intern,
+          department: '',
+          isActive: false,
+          createdAt: DateTime.now(),
+        ),
       );
-      return emp.fullName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+      final empName = emp.id.isNotEmpty ? emp.fullName : 'Unknown';
+      return empName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           att.status.displayName.toLowerCase().contains(_searchQuery.toLowerCase());
     }).toList();
   }
 
-  void _deleteAttendance(String id) {
-    setState(() {
-      _attendances.removeWhere((att) => att.id == id);
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Attendance record deleted'),
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
+    final attendanceState = ref.watch(attendanceProvider);
+    final employeeState = ref.watch(employeeProvider);
+    final filteredAttendances = _getFilteredAttendances(attendanceState.attendanceList, employeeState.employees);
+
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       body: Column(
@@ -86,14 +90,58 @@ class _AttendanceListScreenState extends State<AttendanceListScreen> {
 
           // Attendance List
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _filteredAttendances.length,
-              itemBuilder: (context, index) {
-                final attendance = _filteredAttendances[index];
-                return _buildAttendanceCard(context, attendance);
-              },
-            ),
+            child: attendanceState.isLoading || employeeState.isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(),
+                  )
+                : attendanceState.error != null || employeeState.error != null
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                            const SizedBox(height: 16),
+                            Text('Error: ${attendanceState.error ?? employeeState.error}'),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () {
+                                ref.invalidate(attendanceProvider);
+                                ref.invalidate(employeeProvider);
+                              },
+                              child: const Text('Retry'),
+                            ),
+                          ],
+                        ),
+                      )
+                    : filteredAttendances.isEmpty
+                        ? const Center(
+                            child: Text('No attendance records found'),
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: filteredAttendances.length,
+                            itemBuilder: (context, index) {
+                              final attendance = filteredAttendances[index];
+                              final employee = employeeState.employees.firstWhere(
+                                (e) => e.id == attendance.employeeId,
+                                orElse: () => Employee(
+                                  id: '',
+                                  userId: '',
+                                  firstName: 'Unknown',
+                                  lastName: '',
+                                  email: '',
+                                  phoneNumber: '',
+                                  dateOfBirth: DateTime.now(),
+                                  dateOfJoining: DateTime.now(),
+                                  designation: Designation.intern,
+                                  department: '',
+                                  isActive: false,
+                                  createdAt: DateTime.now(),
+                                ),
+                              );
+                              return _buildAttendanceCard(context, attendance, employee.id.isNotEmpty ? employee : null, ref);
+                            },
+                          ),
           ),
         ],
       ),
@@ -106,9 +154,8 @@ class _AttendanceListScreenState extends State<AttendanceListScreen> {
             ),
           );
           if (result != null && result is Attendance) {
-            setState(() {
-              _attendances.insert(0, result);
-            });
+            await AttendanceService.createAttendance(result);
+            ref.invalidate(attendanceProvider);
           }
         },
         backgroundColor: AppTheme.primaryColor,
@@ -118,10 +165,9 @@ class _AttendanceListScreenState extends State<AttendanceListScreen> {
     );
   }
 
-  Widget _buildAttendanceCard(BuildContext context, Attendance attendance) {
-    final employee = MockDataProvider.mockEmployees.firstWhere(
-      (e) => e.id == attendance.employeeId,
-    );
+  Widget _buildAttendanceCard(BuildContext context, Attendance attendance, Employee? employee, WidgetRef ref) {
+    final empName = employee?.fullName ?? 'Unknown Employee';
+    final empInitials = employee != null ? '${employee.firstName[0]}${employee.lastName[0]}' : 'U';
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -137,12 +183,19 @@ class _AttendanceListScreenState extends State<AttendanceListScreen> {
             ),
           );
           if (result != null && result is Attendance) {
-            setState(() {
-              final index = _attendances.indexWhere((a) => a.id == result.id);
-              if (index != -1) {
-                _attendances[index] = result;
-              }
+            await AttendanceService.updateAttendance(result.id, {
+              'employee_id': result.employeeId,
+              'date': result.date.toIso8601String(),
+              'check_in_time': result.checkInTime?.toIso8601String(),
+              'check_out_time': result.checkOutTime?.toIso8601String(),
+              'status': result.status.toStringValue(),
+              'notes': result.notes,
+              'location': result.location,
+              'latitude': result.latitude,
+              'longitude': result.longitude,
+              'updated_at': DateTime.now().toIso8601String(),
             });
+            ref.invalidate(attendanceProvider);
           }
         },
         child: Padding(
@@ -155,7 +208,7 @@ class _AttendanceListScreenState extends State<AttendanceListScreen> {
                   radius: 30,
                   backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
                   child: Text(
-                    employee.firstName[0] + employee.lastName[0],
+                    empInitials,
                     style: const TextStyle(
                       color: AppTheme.primaryColor,
                       fontWeight: FontWeight.bold,
@@ -170,7 +223,7 @@ class _AttendanceListScreenState extends State<AttendanceListScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      employee.fullName,
+                      empName,
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -222,9 +275,20 @@ class _AttendanceListScreenState extends State<AttendanceListScreen> {
                           child: const Text('Cancel'),
                         ),
                         TextButton(
-                          onPressed: () {
+                          onPressed: () async {
+                            final messenger = ScaffoldMessenger.of(context);
                             Navigator.pop(context);
-                            _deleteAttendance(attendance.id);
+                            await AttendanceService.deleteAttendance(attendance.id);
+                            ref.invalidate(attendanceProvider);
+                            if (mounted) {
+                              messenger.showSnackBar(
+                                const SnackBar(
+                                  content: Text('Attendance record deleted'),
+                                  backgroundColor: Colors.red,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
                           },
                           child: const Text('Delete', style: TextStyle(color: Colors.red)),
                         ),

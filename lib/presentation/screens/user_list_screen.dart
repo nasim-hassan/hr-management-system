@@ -1,24 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hr_management_system/config/app_routes.dart';
 import 'package:hr_management_system/core/theme/app_theme.dart';
 import 'package:hr_management_system/data/models/user_model.dart';
-import 'package:hr_management_system/data/models/mock_data.dart';
+import 'package:hr_management_system/data/providers/user_provider.dart';
 import 'package:hr_management_system/core/enums/app_enums.dart';
 
-class UserListScreen extends StatefulWidget {
+class UserListScreen extends ConsumerStatefulWidget {
   const UserListScreen({super.key});
 
   @override
-  State<UserListScreen> createState() => _UserListScreenState();
+  ConsumerState<UserListScreen> createState() => _UserListScreenState();
 }
 
-class _UserListScreenState extends State<UserListScreen> {
-  final List<User> _users = MockDataProvider.mockUsers;
+class _UserListScreenState extends ConsumerState<UserListScreen> {
   String _searchQuery = '';
   UserRole? _selectedRole;
 
   List<User> get _filteredUsers {
-    var filtered = _users;
+    var filtered = ref.watch(userProvider).users;
 
     // Filter by search query
     if (_searchQuery.isNotEmpty) {
@@ -59,29 +59,46 @@ class _UserListScreenState extends State<UserListScreen> {
     }
   }
 
-  void _deleteUser(User user) {
+  void _deleteUser(User user) async {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Delete User'),
         content: Text('Are you sure you want to delete ${user.email}?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              setState(() {
-                _users.removeWhere((u) => u.id == user.id);
-              });
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${user.email} deleted successfully'),
-                  backgroundColor: Colors.red,
-                ),
+                const SnackBar(content: Text('Deactivating user...')),
               );
+
+              final success = await ref.read(userProvider.notifier).deleteUser(user.id);
+              
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).clearSnackBars();
+
+              if (success) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('${user.email} deleted successfully'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              } else {
+                final error = ref.read(userProvider).error ?? 'Failed to delete user';
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error: $error'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             },
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
@@ -95,7 +112,7 @@ class _UserListScreenState extends State<UserListScreen> {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
-        title: const Text('User Management'),
+        title: const Text('Filter'),
         elevation: 0,
         flexibleSpace: Container(
           decoration: const BoxDecoration(
@@ -173,21 +190,63 @@ class _UserListScreenState extends State<UserListScreen> {
 
           // User List
           Expanded(
-            child: _filteredUsers.isEmpty
-                ? Center(
+            child: Consumer(
+              builder: (context, ref, child) {
+                final userState = ref.watch(userProvider);
+
+                if (userState.isLoading && userState.users.isEmpty) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (userState.error != null && userState.users.isEmpty) {
+                  return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.people_outline, size: 64, color: Colors.grey.shade300),
+                        const Icon(Icons.error_outline, size: 64, color: Colors.red),
                         const SizedBox(height: 16),
                         Text(
-                          'No users found',
-                          style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+                          'Error: ${userState.error}',
+                          style: const TextStyle(fontSize: 16),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () => ref.read(userProvider.notifier).loadUsers(),
+                          child: const Text('Retry'),
                         ),
                       ],
                     ),
-                  )
-                : ListView.builder(
+                  );
+                }
+
+                if (_filteredUsers.isEmpty) {
+                  return RefreshIndicator(
+                    onRefresh: () => ref.read(userProvider.notifier).loadUsers(),
+                    child: ListView(
+                      children: [
+                        SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+                        Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.people_outline, size: 64, color: Colors.grey.shade300),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No users found',
+                                style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return RefreshIndicator(
+                  onRefresh: () => ref.read(userProvider.notifier).loadUsers(),
+                  child: ListView.builder(
                     padding: const EdgeInsets.all(16),
                     itemCount: _filteredUsers.length,
                     itemBuilder: (context, index) {
@@ -195,6 +254,9 @@ class _UserListScreenState extends State<UserListScreen> {
                       return _buildUserCard(context, user);
                     },
                   ),
+                );
+              },
+            ),
           ),
         ],
       ),
