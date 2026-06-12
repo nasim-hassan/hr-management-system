@@ -26,8 +26,15 @@ class _EmployeeListScreenState extends State<EmployeeListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final canPop = Navigator.canPop(context);
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
+      appBar: canPop
+          ? AppBar(
+              title: const Text('Employees Directory'),
+              elevation: 0,
+            )
+          : null,
       body: Column(
         children: [
           // Search Bar
@@ -77,8 +84,9 @@ class _EmployeeListScreenState extends State<EmployeeListScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.pushNamed(context, AppRoutes.editEmployee.replaceAll(':id', 'new'));
+        onPressed: () async {
+          await Navigator.pushNamed(context, AppRoutes.editEmployee.replaceAll(':id', 'new'));
+          setState(() {});
         },
         backgroundColor: AppTheme.primaryColor,
         icon: const Icon(Icons.add, color: Colors.white),
@@ -94,12 +102,13 @@ class _EmployeeListScreenState extends State<EmployeeListScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () {
-          Navigator.pushNamed(
+        onTap: () async {
+          await Navigator.pushNamed(
             context, 
             AppRoutes.employeeDetails.replaceAll(':id', employee.id),
             arguments: employee,
           );
+          setState(() {});
         },
         child: Padding(
           padding: const EdgeInsets.all(16),

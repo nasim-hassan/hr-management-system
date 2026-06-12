@@ -49,8 +49,15 @@ class _LeaveRequestListScreenState extends State<LeaveRequestListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final canPop = Navigator.canPop(context);
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
+      appBar: canPop
+          ? AppBar(
+              title: const Text('Leave Requests'),
+              elevation: 0,
+            )
+          : null,
       body: Column(
         children: [
           // Search Bar

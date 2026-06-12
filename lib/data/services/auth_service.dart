@@ -4,6 +4,7 @@ import 'package:hr_management_system/config/supabase_config.dart';
 import 'package:hr_management_system/data/services/user_profile_service.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:supabase/supabase.dart' as supabase_auth;
+import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 import 'dart:convert';
 
 /// Real Supabase Authentication Service
@@ -66,30 +67,6 @@ class AuthService {
     try {
       print('🔐 [AUTH] Attempting login with email: $email');
       
-      // BYPASS: Allow demo login with admin@gmail.com / Demo@123
-      if (email == 'admin@gmail.com' && password == 'Demo@123') {
-        print('🔓 [BYPASS] Using demo credentials bypass');
-        final demoUser = User(
-          id: 'demo-user-id',
-          email: 'admin@gmail.com',
-          fullName: 'Nasim Hassan',
-          role: UserRole.hrAdmin,
-          phoneNumber: '+880-1711-543210',
-          profileImage: null,
-          isActive: true,
-          createdAt: DateTime.now(),
-        );
-        
-        // Store user in secure storage
-        await _secureStorage.write(
-          key: _userKey,
-          value: jsonEncode(demoUser.toJson()),
-        );
-        
-        print('✅ [BYPASS] Demo login successful!');
-        return demoUser;
-      }
-      
       print('🔐 [AUTH] Supabase URL: ${SupabaseConfig.client.supabaseUrl}');
       print('🔐 [AUTH] Client initialized: ${SupabaseConfig.client != null}');
       
@@ -110,14 +87,23 @@ class AuthService {
 
       // Fetch user profile from database
       print('🔍 [DB] Fetching user profile for UUID: ${response.user!.id}');
-      final user = await UserProfileService.fetchUserProfile(response.user!.id);
+      var user = await UserProfileService.fetchUserProfile(response.user!.id);
 
       if (user == null) {
-        print('❌ [DB] User profile not found in database!');
-        print('⚠️  [DB] UUID ${response.user!.id} exists in Auth but not in users table');
-        // User exists in auth but no profile - this shouldn't happen with proper setup
-        await SupabaseConfig.client.auth.signOut();
-        throw AuthException('User profile not found. Please contact admin.');
+        print('⚠️  [DB] User profile not found in database! Creating default profile...');
+        // Create a default profile
+        user = await UserProfileService.createUser(
+          id: response.user!.id,
+          email: response.user!.email ?? email,
+          fullName: response.user!.userMetadata?['full_name'] as String? ?? 'New Employee',
+          role: UserRole.employee, // Default role
+        );
+
+        if (user == null) {
+          print('❌ [DB] Failed to create default user profile');
+          await SupabaseConfig.client.auth.signOut();
+          throw AuthException('User profile not found and could not be created. Please contact admin.');
+        }
       }
 
       print('✅ [DB] User profile found: ${user.fullName} (${user.role.displayName})');
@@ -131,6 +117,9 @@ class AuthService {
       print('💾 [STORAGE] User stored in secure storage');
       print('✅ [LOGIN] Login successful!');
       return user;
+    } on supabase.AuthException catch (e) {
+      print('❌ [ERROR] Supabase AuthException: ${e.message}');
+      throw AuthException(e.message);
     } on AuthException catch (e) {
       print('❌ [ERROR] AuthException: $e');
       rethrow;

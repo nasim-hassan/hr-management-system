@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hr_management_system/core/theme/app_theme.dart';
 import 'package:hr_management_system/data/models/user_model.dart';
+import 'package:hr_management_system/data/models/mock_data.dart';
 import 'package:hr_management_system/core/enums/app_enums.dart';
 
 class UserFormScreen extends StatefulWidget {
@@ -67,8 +68,7 @@ class _UserFormScreenState extends State<UserFormScreen> {
       }
 
       // Create/Update User object
-      // ignore: unused_local_variable
-      final _updatedUser = widget.user?.copyWith(
+      final updatedUser = widget.user?.copyWith(
             email: _emailController.text,
             fullName: _fullNameController.text,
             phoneNumber: _phoneController.text,
@@ -77,7 +77,7 @@ class _UserFormScreenState extends State<UserFormScreen> {
             updatedAt: DateTime.now(),
           ) ??
           User(
-            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            id: 'user_${DateTime.now().millisecondsSinceEpoch}',
             email: _emailController.text,
             fullName: _fullNameController.text,
             phoneNumber: _phoneController.text,
@@ -86,7 +86,15 @@ class _UserFormScreenState extends State<UserFormScreen> {
             createdAt: DateTime.now(),
           );
 
-      // TODO: Save to Supabase via Riverpod - using _updatedUser
+      // Save to mock dataset
+      if (isAdd) {
+        MockDataProvider.mockUsers.add(updatedUser);
+      } else {
+        final index = MockDataProvider.mockUsers.indexWhere((u) => u.id == widget.user!.id);
+        if (index != -1) {
+          MockDataProvider.mockUsers[index] = updatedUser;
+        }
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -439,7 +447,7 @@ class _UserFormScreenState extends State<UserFormScreen> {
     required Function(UserRole) onChanged,
   }) {
     return DropdownButtonFormField<UserRole>(
-      value: value,
+      initialValue: value,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: const Icon(Icons.security, color: AppTheme.primaryColor),

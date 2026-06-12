@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hr_management_system/core/theme/app_theme.dart';
 import 'package:hr_management_system/data/models/employee_model.dart';
+import 'package:hr_management_system/data/models/mock_data.dart';
 import 'package:hr_management_system/core/enums/app_enums.dart';
 
 class EmployeeFormScreen extends StatefulWidget {
@@ -15,6 +16,7 @@ class EmployeeFormScreen extends StatefulWidget {
 class _EmployeeFormScreenState extends State<EmployeeFormScreen> {
   final _formKey = GlobalKey<FormState>();
   
+  late TextEditingController _idController;
   late TextEditingController _firstNameController;
   late TextEditingController _lastNameController;
   late TextEditingController _emailController;
@@ -27,6 +29,7 @@ class _EmployeeFormScreenState extends State<EmployeeFormScreen> {
   @override
   void initState() {
     super.initState();
+    _idController = TextEditingController(text: widget.employee?.id ?? '');
     _firstNameController = TextEditingController(text: widget.employee?.firstName ?? '');
     _lastNameController = TextEditingController(text: widget.employee?.lastName ?? '');
     _emailController = TextEditingController(text: widget.employee?.email ?? '');
@@ -41,6 +44,7 @@ class _EmployeeFormScreenState extends State<EmployeeFormScreen> {
 
   @override
   void dispose() {
+    _idController.dispose();
     _firstNameController.dispose();
     _lastNameController.dispose();
     _emailController.dispose();
@@ -51,7 +55,47 @@ class _EmployeeFormScreenState extends State<EmployeeFormScreen> {
 
   void _saveEmployee() {
     if (_formKey.currentState!.validate()) {
-      // Logic to save/update employee via Riverpod/Supabase goes here
+      final id = _idController.text.trim();
+      final firstName = _firstNameController.text.trim();
+      final lastName = _lastNameController.text.trim();
+      final email = _emailController.text.trim();
+      final phone = _phoneController.text.trim();
+      final department = _departmentController.text.trim();
+      
+      if (widget.employee == null) {
+        // Add Mode
+        final newEmployee = Employee(
+          id: id,
+          userId: 'user_$id',
+          firstName: firstName,
+          lastName: lastName,
+          email: email,
+          phoneNumber: phone,
+          dateOfBirth: DateTime(1995, 1, 1),
+          dateOfJoining: DateTime.now(),
+          designation: _selectedDesignation,
+          department: department,
+          isActive: _isActive,
+          createdAt: DateTime.now(),
+        );
+        MockDataProvider.mockEmployees.add(newEmployee);
+      } else {
+        // Edit Mode
+        final index = MockDataProvider.mockEmployees.indexWhere((emp) => emp.id == widget.employee!.id);
+        if (index != -1) {
+          final updatedEmployee = widget.employee!.copyWith(
+            firstName: firstName,
+            lastName: lastName,
+            email: email,
+            phoneNumber: phone,
+            department: department,
+            designation: _selectedDesignation,
+            isActive: _isActive,
+            updatedAt: DateTime.now(),
+          );
+          MockDataProvider.mockEmployees[index] = updatedEmployee;
+        }
+      }
       
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -93,6 +137,23 @@ class _EmployeeFormScreenState extends State<EmployeeFormScreen> {
               _buildSectionCard(
                 title: 'Personal Details',
                 children: [
+                  _buildTextField(
+                    controller: _idController,
+                    label: 'Employee ID',
+                    icon: Icons.badge,
+                    enabled: widget.employee == null,
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return 'Required';
+                      if (widget.employee == null) {
+                        final exists = MockDataProvider.mockEmployees.any(
+                          (emp) => emp.id.trim().toLowerCase() == v.trim().toLowerCase(),
+                        );
+                        if (exists) return 'Employee ID already exists';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
                   Row(
                     children: [
                       Expanded(
@@ -230,21 +291,27 @@ class _EmployeeFormScreenState extends State<EmployeeFormScreen> {
     required IconData icon,
     TextInputType? keyboardType,
     String? Function(String?)? validator,
+    bool enabled = true,
   }) {
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
       validator: validator,
+      enabled: enabled,
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, color: AppTheme.primaryColor),
+        prefixIcon: Icon(icon, color: enabled ? AppTheme.primaryColor : Colors.grey),
         filled: true,
-        fillColor: Colors.grey.shade50,
+        fillColor: enabled ? Colors.grey.shade50 : Colors.grey.shade200,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: Colors.grey.shade300),
         ),
         enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        disabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: Colors.grey.shade300),
         ),

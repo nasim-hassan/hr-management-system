@@ -48,7 +48,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         // Navigate to main layout
         Navigator.of(context).pushReplacementNamed('/home');
       } else {
-        _showErrorSnackBar('Login failed. Please try again.');
+        final error = ref.read(authProvider).error;
+        _showErrorSnackBar(error ?? 'Login failed. Please try again.');
       }
     } catch (e) {
       if (mounted) {

@@ -15,13 +15,13 @@ class UserProfileService {
           .from(_tableName)
           .select()
           .eq('id', userId)
-          .single();
+          .maybeSingle();
 
       print('✅ [USER_PROFILE] Response received from database');
       print('📦 [USER_PROFILE] Data: $response');
 
       if (response == null) {
-        print('❌ [USER_PROFILE] Response is null');
+        print('ℹ️ [USER_PROFILE] No profile found for UUID: $userId');
         return null;
       }
 
@@ -42,7 +42,7 @@ class UserProfileService {
           .from(_tableName)
           .select()
           .eq('email', email)
-          .single();
+          .maybeSingle();
 
       if (response == null) return null;
 
@@ -81,7 +81,7 @@ class UserProfileService {
 
       if (response == null || response is! List) return [];
 
-      return (response as List<dynamic>)
+      return (response)
           .map((item) => User.fromJson(item as Map<String, dynamic>))
           .toList();
     } catch (e) {
@@ -101,7 +101,7 @@ class UserProfileService {
 
       if (response == null || response is! List) return [];
 
-      return (response as List<dynamic>)
+      return (response)
           .map((item) => User.fromJson(item as Map<String, dynamic>))
           .toList();
     } catch (e) {
@@ -121,7 +121,7 @@ class UserProfileService {
 
       if (response == null || response is! List) return [];
 
-      return (response as List<dynamic>)
+      return (response)
           .map((item) => User.fromJson(item as Map<String, dynamic>))
           .toList();
     } catch (e) {
@@ -129,8 +129,9 @@ class UserProfileService {
     }
   }
 
-  /// Create new user (admin only)
+  /// Create new user
   static Future<User?> createUser({
+    String? id,
     required String email,
     required String fullName,
     required UserRole role,
@@ -143,6 +144,7 @@ class UserProfileService {
   }) async {
     try {
       final userData = {
+        if (id != null) 'id': id,
         'email': email,
         'full_name': fullName,
         'role': role.toStringValue(),

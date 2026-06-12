@@ -67,7 +67,7 @@ class MockDataProvider {
   // ==================== MOCK EMPLOYEES ====================
   static final List<Employee> mockEmployees = [
     Employee(
-      id: 'emp_1',
+      id: '223071044',
       userId: 'user_3',
       firstName: 'Emon',
       lastName: 'Khan',
@@ -97,7 +97,7 @@ class MockDataProvider {
       createdAt: DateTime(2022, 3, 1),
     ),
     Employee(
-      id: 'emp_2',
+      id: '223071045',
       userId: 'user_4',
       firstName: 'Lamia',
       lastName: 'Tondra',
@@ -127,7 +127,7 @@ class MockDataProvider {
       createdAt: DateTime(2023, 2, 15),
     ),
     Employee(
-      id: 'emp_3',
+      id: '223071046',
       userId: 'user_5',
       firstName: 'Rayan',
       lastName: 'Khan',
@@ -162,7 +162,7 @@ class MockDataProvider {
   static final List<Attendance> mockAttendance = [
     Attendance(
       id: 'att_1',
-      employeeId: 'emp_1',
+      employeeId: '223071044',
       date: DateTime(2024, 4, 23),
       checkInTime: DateTime(2024, 4, 23, 9, 15),
       checkOutTime: DateTime(2024, 4, 23, 18, 30),
@@ -175,7 +175,7 @@ class MockDataProvider {
     ),
     Attendance(
       id: 'att_2',
-      employeeId: 'emp_1',
+      employeeId: '223071044',
       date: DateTime(2024, 4, 24),
       checkInTime: DateTime(2024, 4, 24, 10, 0),
       checkOutTime: DateTime(2024, 4, 24, 17, 45),
@@ -188,7 +188,7 @@ class MockDataProvider {
     ),
     Attendance(
       id: 'att_3',
-      employeeId: 'emp_2',
+      employeeId: '223071045',
       date: DateTime(2024, 4, 23),
       checkInTime: DateTime(2024, 4, 23, 9, 0),
       checkOutTime: DateTime(2024, 4, 23, 13, 0),
@@ -201,7 +201,7 @@ class MockDataProvider {
     ),
     Attendance(
       id: 'att_4',
-      employeeId: 'emp_3',
+      employeeId: '223071046',
       date: DateTime(2024, 4, 24),
       checkInTime: DateTime(2024, 4, 24, 9, 0),
       checkOutTime: DateTime(2024, 4, 24, 18, 0),
@@ -218,7 +218,7 @@ class MockDataProvider {
   static final List<LeaveRequest> mockLeaveRequests = [
     LeaveRequest(
       id: 'leave_1',
-      employeeId: 'emp_1',
+      employeeId: '223071044',
       leaveType: LeaveType.annual,
       startDate: DateTime(2024, 5, 1),
       endDate: DateTime(2024, 5, 5),
@@ -232,7 +232,7 @@ class MockDataProvider {
     ),
     LeaveRequest(
       id: 'leave_2',
-      employeeId: 'emp_2',
+      employeeId: '223071045',
       leaveType: LeaveType.sick,
       startDate: DateTime(2024, 4, 25),
       endDate: DateTime(2024, 4, 25),
@@ -246,7 +246,7 @@ class MockDataProvider {
     ),
     LeaveRequest(
       id: 'leave_3',
-      employeeId: 'emp_3',
+      employeeId: '223071046',
       leaveType: LeaveType.casual,
       startDate: DateTime(2024, 5, 10),
       endDate: DateTime(2024, 5, 12),
@@ -260,7 +260,7 @@ class MockDataProvider {
     ),
     LeaveRequest(
       id: 'leave_4',
-      employeeId: 'emp_1',
+      employeeId: '223071044',
       leaveType: LeaveType.casual,
       startDate: DateTime(2024, 6, 15),
       endDate: DateTime(2024, 6, 16),
@@ -278,7 +278,7 @@ class MockDataProvider {
   static final List<Payroll> mockPayroll = [
     Payroll(
       id: 'payroll_1',
-      employeeId: 'emp_1',
+      employeeId: '223071044',
       month: 3,
       year: 2024,
       baseSalary: 500000,
@@ -295,7 +295,7 @@ class MockDataProvider {
     ),
     Payroll(
       id: 'payroll_2',
-      employeeId: 'emp_1',
+      employeeId: '223071044',
       month: 4,
       year: 2024,
       baseSalary: 500000,
@@ -312,7 +312,7 @@ class MockDataProvider {
     ),
     Payroll(
       id: 'payroll_3',
-      employeeId: 'emp_2',
+      employeeId: '223071045',
       month: 4,
       year: 2024,
       baseSalary: 520000,
@@ -329,7 +329,7 @@ class MockDataProvider {
     ),
     Payroll(
       id: 'payroll_4',
-      employeeId: 'emp_3',
+      employeeId: '223071046',
       month: 4,
       year: 2024,
       baseSalary: 750000,
@@ -350,7 +350,7 @@ class MockDataProvider {
   static final List<PerformanceReview> mockPerformanceReviews = [
     PerformanceReview(
       id: 'review_1',
-      employeeId: 'emp_1',
+      employeeId: '223071044',
       reviewedBy: 'user_2',
       reviewYear: 2024,
       reviewQuarter: 1,
@@ -366,7 +366,7 @@ class MockDataProvider {
     ),
     PerformanceReview(
       id: 'review_2',
-      employeeId: 'emp_2',
+      employeeId: '223071045',
       reviewedBy: 'user_2',
       reviewYear: 2024,
       reviewQuarter: 1,
@@ -382,7 +382,7 @@ class MockDataProvider {
     ),
     PerformanceReview(
       id: 'review_3',
-      employeeId: 'emp_3',
+      employeeId: '223071046',
       reviewedBy: 'user_2',
       reviewYear: 2024,
       reviewQuarter: 1,
@@ -419,7 +419,7 @@ class MockDataProvider {
       type: NotificationType.attendanceReminder,
       title: 'Attendance Reminder',
       message: 'Please mark your attendance for today.',
-      relatedId: 'emp_2',
+      relatedId: '223071045',
       relatedType: 'Employee',
       data: {'date': '2024-04-24'},
       isRead: false,

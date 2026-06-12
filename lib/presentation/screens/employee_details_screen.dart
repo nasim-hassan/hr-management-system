@@ -1,20 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:hr_management_system/core/theme/app_theme.dart';
 import 'package:hr_management_system/data/models/employee_model.dart';
+import 'package:hr_management_system/data/models/mock_data.dart';
 import 'package:hr_management_system/config/app_routes.dart';
 
-class EmployeeDetailsScreen extends StatelessWidget {
+class EmployeeDetailsScreen extends StatefulWidget {
   final Employee employee;
 
   const EmployeeDetailsScreen({super.key, required this.employee});
 
   @override
+  State<EmployeeDetailsScreen> createState() => _EmployeeDetailsScreenState();
+}
+
+class _EmployeeDetailsScreenState extends State<EmployeeDetailsScreen> {
+  late String _employeeId;
+
+  @override
+  void initState() {
+    super.initState();
+    _employeeId = widget.employee.id;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // Retrieve latest employee data from the mock provider
+    final employee = MockDataProvider.mockEmployees.firstWhere(
+      (emp) => emp.id == _employeeId,
+      orElse: () => widget.employee,
+    );
+
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       body: CustomScrollView(
         slivers: [
-          _buildSliverAppBar(context),
+          _buildSliverAppBar(context, employee),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -64,7 +84,7 @@ class EmployeeDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSliverAppBar(BuildContext context) {
+  Widget _buildSliverAppBar(BuildContext context, Employee employee) {
     return SliverAppBar(
       expandedHeight: 250.0,
       floating: false,
@@ -121,12 +141,13 @@ class EmployeeDetailsScreen extends StatelessWidget {
       actions: [
         IconButton(
           icon: const Icon(Icons.edit, color: Colors.white),
-          onPressed: () {
-            Navigator.pushNamed(
+          onPressed: () async {
+            await Navigator.pushNamed(
               context, 
               AppRoutes.editEmployee.replaceAll(':id', employee.id),
               arguments: employee,
             );
+            setState(() {});
           },
         ),
       ],

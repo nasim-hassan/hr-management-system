@@ -47,8 +47,15 @@ class _ReportListScreenState extends State<ReportListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final canPop = Navigator.canPop(context);
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
+      appBar: canPop
+          ? AppBar(
+              title: const Text('Reports'),
+              elevation: 0,
+            )
+          : null,
       body: Column(
         children: [
           // Search and Filter Bar

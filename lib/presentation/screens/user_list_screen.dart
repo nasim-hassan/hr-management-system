@@ -199,8 +199,9 @@ class _UserListScreenState extends State<UserListScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.pushNamed(context, AppRoutes.addUser);
+        onPressed: () async {
+          await Navigator.pushNamed(context, AppRoutes.addUser);
+          setState(() {});
         },
         backgroundColor: AppTheme.primaryColor,
         icon: const Icon(Icons.add, color: Colors.white),
@@ -216,11 +217,12 @@ class _UserListScreenState extends State<UserListScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () {
-          Navigator.pushNamed(
+        onTap: () async {
+          await Navigator.pushNamed(
             context,
             AppRoutes.userDetails.replaceAll(':id', user.id),
           );
+          setState(() {});
         },
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -309,11 +311,11 @@ class _UserListScreenState extends State<UserListScreen> {
               PopupMenuButton(
                 itemBuilder: (context) => [
                   PopupMenuItem(
-                    child: Row(
+                    child: const Row(
                       children: [
-                        const Icon(Icons.edit, size: 18),
-                        const SizedBox(width: 8),
-                        const Text('Edit'),
+                        Icon(Icons.edit, size: 18),
+                        SizedBox(width: 8),
+                        Text('Edit'),
                       ],
                     ),
                     onTap: () {
@@ -325,11 +327,11 @@ class _UserListScreenState extends State<UserListScreen> {
                     },
                   ),
                   PopupMenuItem(
-                    child: Row(
+                    child: const Row(
                       children: [
-                        const Icon(Icons.delete, size: 18, color: Colors.red),
-                        const SizedBox(width: 8),
-                        const Text('Delete', style: TextStyle(color: Colors.red)),
+                        Icon(Icons.delete, size: 18, color: Colors.red),
+                        SizedBox(width: 8),
+                        Text('Delete', style: TextStyle(color: Colors.red)),
                       ],
                     ),
                     onTap: () => _deleteUser(user),

@@ -9,7 +9,13 @@ import 'presentation/screens/login_screen.dart';
 import 'presentation/screens/employee_list_screen.dart';
 import 'presentation/screens/employee_details_screen.dart';
 import 'presentation/screens/employee_form_screen.dart';
+import 'presentation/screens/leave_request_list_screen.dart';
+import 'presentation/screens/report_list_screen.dart';
+import 'presentation/screens/user_list_screen.dart';
+import 'presentation/screens/user_details_screen.dart';
+import 'presentation/screens/user_form_screen.dart';
 import 'data/models/employee_model.dart';
+import 'data/models/user_model.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,6 +51,14 @@ class HRManagementApp extends ConsumerWidget {
           return MaterialPageRoute(builder: (_) => const EmployeeListScreen());
         }
         
+        if (settings.name == AppRoutes.leaveRequests) {
+          return MaterialPageRoute(builder: (_) => const LeaveRequestListScreen());
+        }
+        
+        if (settings.name == AppRoutes.reports) {
+          return MaterialPageRoute(builder: (_) => const ReportListScreen());
+        }
+        
         if (settings.name != null && settings.name!.startsWith('/employees/')) {
           final parts = settings.name!.split('/');
           if (parts.length == 3) {
@@ -68,6 +82,31 @@ class HRManagementApp extends ConsumerWidget {
                 builder: (_) => EmployeeFormScreen(employee: args),
               );
             }
+          }
+        }
+        
+        if (settings.name == AppRoutes.users) {
+          return MaterialPageRoute(builder: (_) => const UserListScreen());
+        }
+        
+        if (settings.name == AppRoutes.addUser) {
+          return MaterialPageRoute(builder: (_) => const UserFormScreen());
+        }
+        
+        if (settings.name != null && settings.name!.startsWith('/users/')) {
+          final parts = settings.name!.split('/');
+          if (parts.length == 3) {
+            // View details
+            final id = parts[2];
+            final args = settings.arguments as User?;
+            return MaterialPageRoute(
+              builder: (_) => UserDetailsScreen(userId: id, user: args),
+            );
+          } else if (parts.length == 4 && parts[3] == 'edit') {
+            final args = settings.arguments as User?;
+            return MaterialPageRoute(
+              builder: (_) => UserFormScreen(user: args),
+            );
           }
         }
         

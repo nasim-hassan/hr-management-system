@@ -64,7 +64,7 @@ class Employee {
     this.updatedAt,
   });
 
-  String get fullName => '$firstName $lastName';
+  String get fullName => '$firstName $lastName ($id)';
 
   factory Employee.fromJson(Map<String, dynamic> json) {
     return Employee(

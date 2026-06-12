@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hr_management_system/config/app_routes.dart';
 import 'package:hr_management_system/core/theme/app_theme.dart';
 import 'package:hr_management_system/data/models/user_model.dart';
+import 'package:hr_management_system/data/models/mock_data.dart';
 import 'package:hr_management_system/core/enums/app_enums.dart';
 import 'package:intl/intl.dart';
 
@@ -21,7 +22,7 @@ class UserDetailsScreen extends StatefulWidget {
 
 class _UserDetailsScreenState extends State<UserDetailsScreen> {
   late User _user;
-  bool _isLoading = false;
+  final bool _isLoading = false;
 
   @override
   void initState() {
@@ -30,7 +31,11 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
   }
 
   User _getMockUser(String userId) {
-    // Mock data - in real app, fetch from Supabase
+    final index = MockDataProvider.mockUsers.indexWhere((u) => u.id == userId);
+    if (index != -1) {
+      return MockDataProvider.mockUsers[index];
+    }
+    // Fallback if not found
     final roleIndex = userId.hashCode % 3;
     return User(
       id: userId,
@@ -64,7 +69,8 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              // TODO: Delete from Supabase
+              // Delete from Mock list
+              MockDataProvider.mockUsers.removeWhere((u) => u.id == _user.id);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('${_user.email} deleted successfully'),
@@ -82,6 +88,12 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Read up-to-date user details from the mock database
+    _user = MockDataProvider.mockUsers.firstWhere(
+      (u) => u.id == widget.userId,
+      orElse: () => _user,
+    );
+
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
@@ -100,22 +112,24 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
           PopupMenuButton(
             itemBuilder: (context) => [
               PopupMenuItem(
-                child: Row(
+                child: const Row(
                   children: [
-                    const Icon(Icons.edit, size: 18),
-                    const SizedBox(width: 8),
-                    const Text('Edit'),
+                    Icon(Icons.edit, size: 18),
+                    SizedBox(width: 8),
+                    Text('Edit'),
                   ],
                 ),
-                onTap: () {
-                  Navigator.pushNamed(
+                onTap: () async {
+                  await Navigator.pushNamed(
                     context,
                     AppRoutes.editUser.replaceAll(':id', _user.id),
                     arguments: _user,
                   );
+                  setState(() {});
                 },
               ),
               PopupMenuItem(
+                onTap: _deleteUser,
                 child: Row(
                   children: [
                     const Icon(Icons.delete, size: 18, color: Colors.red),
@@ -123,7 +137,6 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
                     const Text('Delete', style: TextStyle(color: Colors.red)),
                   ],
                 ),
-                onTap: _deleteUser,
               ),
             ],
           ),
@@ -212,7 +225,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.info, color: AppTheme.primaryColor),
+                        const Icon(Icons.info, color: AppTheme.primaryColor),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
@@ -221,7 +234,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
                                 : _user.role.displayName == 'Manager'
                                     ? 'This user can manage employees and approve requests.'
                                     : 'This user has standard employee access.',
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 12,
                               color: AppTheme.primaryColor,
                             ),
@@ -241,7 +254,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           colors: [
             AppTheme.primaryColor,
             AppTheme.secondaryColor,

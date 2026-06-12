@@ -267,17 +267,20 @@ class AdminDashboardScreen extends StatelessWidget {
                   _QuickActionButton(
                     icon: Icons.person_add,
                     label: 'Add Employee',
-                    onTap: () {},
+                    onTap: () => Navigator.pushNamed(
+                      context,
+                      AppRoutes.editEmployee.replaceAll(':id', 'new'),
+                    ),
                   ),
                   _QuickActionButton(
                     icon: Icons.assignment,
                     label: 'Review Leave Requests',
-                    onTap: () {},
+                    onTap: () => Navigator.pushNamed(context, AppRoutes.leaveRequests),
                   ),
                   _QuickActionButton(
                     icon: Icons.assessment,
                     label: 'Generate Reports',
-                    onTap: () {},
+                    onTap: () => Navigator.pushNamed(context, AppRoutes.reports),
                   ),
                 ],
               ),
