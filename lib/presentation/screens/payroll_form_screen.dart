@@ -99,7 +99,7 @@ class _PayrollFormScreenState extends State<PayrollFormScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(widget.payroll == null ? 'Payroll Added' : 'Payroll Updated'),
+          content: Text(widget.payroll == null ? 'Salary Generated Successfully' : 'Payroll Updated'),
           backgroundColor: AppTheme.successColor,
           behavior: SnackBarBehavior.floating,
         ),
@@ -129,7 +129,7 @@ class _PayrollFormScreenState extends State<PayrollFormScreen> {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
-        title: Text(isEdit ? 'Edit Payroll' : 'Add Payroll'),
+        title: Text(isEdit ? 'Edit Payroll' : 'Generate Salary'),
         elevation: 0,
         flexibleSpace: Container(
           decoration: const BoxDecoration(
@@ -173,10 +173,12 @@ class _PayrollFormScreenState extends State<PayrollFormScreen> {
                       setState(() {
                         if (val != null) {
                           _selectedEmployeeId = val;
-                          // Auto-fill base salary if adding new
+                          // Auto-fill breakdown if adding new
                           if (!isEdit) {
                             final emp = MockDataProvider.mockEmployees.firstWhere((e) => e.id == val);
-                            _baseSalaryController.text = emp.salary ?? '';
+                            _baseSalaryController.text = emp.baseSalary?.round().toString() ?? emp.salary ?? '';
+                            _allowancesController.text = emp.allowances?.round().toString() ?? '0';
+                            _deductionsController.text = emp.deductions?.round().toString() ?? '0';
                           }
                         }
                       });
@@ -407,7 +409,7 @@ class _PayrollFormScreenState extends State<PayrollFormScreen> {
                   backgroundColor: AppTheme.primaryColor,
                 ),
                 child: Text(
-                  isEdit ? 'Update Payroll' : 'Save Payroll',
+                  isEdit ? 'Update Payroll' : 'Generate Salary',
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
               ),

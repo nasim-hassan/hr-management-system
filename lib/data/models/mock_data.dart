@@ -7,6 +7,7 @@ import 'package:hr_management_system/data/models/payroll_model.dart';
 import 'package:hr_management_system/data/models/performance_review_model.dart';
 import 'package:hr_management_system/data/models/notification_model.dart';
 import 'package:hr_management_system/data/models/report_model.dart';
+import 'package:hr_management_system/data/models/holiday_model.dart';
 
 /// Mock Data Provider - Contains test data for all models
 class MockDataProvider {
@@ -500,6 +501,17 @@ class MockDataProvider {
       status: ReportStatus.pending,
       createdAt: DateTime.now().subtract(const Duration(hours: 2)),
     ),
+  ];
+
+  // ==================== MOCK HOLIDAYS ====================
+  static final List<int> mockWeeklyHolidays = [6, 7]; // 6 = Saturday, 7 = Sunday
+  static final List<Holiday> mockCustomHolidays = [
+    Holiday(id: 'h_1', name: 'New Year\'s Day', date: DateTime(2026, 1, 1)),
+    Holiday(id: 'h_2', name: 'International Mother Language Day', date: DateTime(2026, 2, 21)),
+    Holiday(id: 'h_3', name: 'Independence Day', date: DateTime(2026, 3, 26)),
+    Holiday(id: 'h_4', name: 'May Day', date: DateTime(2026, 5, 1)),
+    Holiday(id: 'h_5', name: 'Eid-ul-Fitr', date: DateTime(2026, 5, 15)),
+    Holiday(id: 'h_6', name: 'Christmas Day', date: DateTime(2026, 12, 25)),
   ];
 
   // ==================== STATIC METHODS ====================

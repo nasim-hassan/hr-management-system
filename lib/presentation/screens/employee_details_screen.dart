@@ -76,13 +76,13 @@ class _EmployeeDetailsScreenState extends State<EmployeeDetailsScreen> {
                   ),
                   const SizedBox(height: 16),
                   _buildSectionCard(
-                    title: 'Salary & Banking Info',
+                    title: 'Salary Information',
                     icon: Icons.account_balance_wallet,
                     children: [
-                      _buildInfoRow('Salary', employee.salary ?? 'N/A'),
-                      _buildInfoRow('Bank Name', employee.bankName ?? 'N/A'),
-                      _buildInfoRow('Account Number', employee.accountNumber ?? 'N/A'),
-                      _buildInfoRow('IFSC Code', employee.ifscCode ?? 'N/A'),
+                      _buildInfoRow('Base Salary', employee.baseSalary != null ? '₹${employee.baseSalary!.round()}' : 'N/A'),
+                      _buildInfoRow('Allowances', employee.allowances != null ? '+₹${employee.allowances!.round()}' : 'N/A'),
+                      _buildInfoRow('Deductions', employee.deductions != null ? '-₹${employee.deductions!.round()}' : 'N/A'),
+                      _buildHighlightedInfoRow('Net Monthly Salary', employee.salary != null ? '₹${employee.salary}' : 'N/A', Colors.green),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -237,6 +237,38 @@ class _EmployeeDetailsScreenState extends State<EmployeeDetailsScreen> {
               style: const TextStyle(
                 color: AppTheme.textPrimaryColor,
                 fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHighlightedInfoRow(String label, String value, Color valueColor) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 2,
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: AppTheme.textSecondaryColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: Text(
+              value,
+              style: TextStyle(
+                color: valueColor,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
               ),
             ),
           ),

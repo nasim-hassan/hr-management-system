@@ -112,8 +112,8 @@ class _PayrollListScreenState extends State<PayrollListScreen> {
           }
         },
         backgroundColor: AppTheme.primaryColor,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('Add Payroll', style: TextStyle(color: Colors.white)),
+        icon: const Icon(Icons.receipt_long, color: Colors.white),
+        label: const Text('Generate Salary', style: TextStyle(color: Colors.white)),
       ),
     );
   }

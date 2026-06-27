@@ -10,6 +10,7 @@ import 'package:hr_management_system/presentation/screens/leave_request_list_scr
 import 'package:hr_management_system/presentation/screens/payroll_list_screen.dart';
 import 'package:hr_management_system/presentation/screens/report_list_screen.dart';
 import 'package:hr_management_system/presentation/screens/user_list_screen.dart';
+import 'package:hr_management_system/presentation/screens/holiday_list_screen.dart';
 import 'package:hr_management_system/presentation/screens/notification_screen.dart';
 
 class MainLayout extends ConsumerStatefulWidget {
@@ -30,6 +31,7 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
     const PayrollListScreen(),
     const ReportListScreen(),
     const UserListScreen(),
+    const HolidayListScreen(),
   ];
 
   final List<_SidebarItem> _menuItems = [
@@ -40,6 +42,7 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
     _SidebarItem(icon: Icons.payments, label: 'Payroll'),
     _SidebarItem(icon: Icons.bar_chart, label: 'Reports'),
     _SidebarItem(icon: Icons.supervised_user_circle, label: 'Users'),
+    _SidebarItem(icon: Icons.calendar_today, label: 'Holidays'),
   ];
 
   String _getAppBarTitle() {
@@ -51,6 +54,7 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
       case 4: return 'Payroll';
       case 5: return 'Reports';
       case 6: return 'User Management';
+      case 7: return 'Holiday Configuration';
       default: return 'HR System';
     }
   }

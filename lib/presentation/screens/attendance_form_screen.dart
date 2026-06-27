@@ -201,30 +201,6 @@ class _AttendanceFormScreenState extends ConsumerState<AttendanceFormScreen> {
                                 });
                               },
                             ),
-                            DropdownButtonFormField<String>(
-                              decoration: InputDecoration(
-                                labelText: 'Employee',
-                                prefixIcon: const Icon(Icons.person, color: AppTheme.primaryColor),
-                                filled: true,
-                                fillColor: Colors.grey.shade50,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(color: Colors.grey.shade300),
-                                ),
-                              ),
-                              initialValue: _selectedEmployeeId,
-                              items: employeeState.employees.map((e) {
-                                return DropdownMenuItem(
-                                  value: e.id,
-                                  child: Text(e.fullName),
-                                );
-                              }).toList(),
-                              onChanged: isEdit ? null : (val) {
-                                setState(() {
-                                  if (val != null) _selectedEmployeeId = val;
-                                });
-                              },
-                            ),
                             const SizedBox(height: 16),
                             InkWell(
                               onTap: () => _selectDate(context),

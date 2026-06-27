@@ -76,9 +76,9 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
-  assets:
-    - assets/images/
-    - assets/icons/
-    - assets/animations/
+  # assets:
+  #   - assets/images/
+  #   - assets/icons/
+  #   - assets/animations/
 
   # Fonts removed temporarily to avoid build error

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:hr_management_system/core/enums/app_enums.dart';
 
 /// Employee Model - Extended employee information
@@ -21,6 +22,9 @@ class Employee {
   final String department;
   final String? manager; // Manager's user ID
   final String? salary;
+  final double? baseSalary;
+  final double? allowances;
+  final double? deductions;
   final String? accountNumber;
   final String? bankName;
   final String? ifscCode;
@@ -52,6 +56,9 @@ class Employee {
     required this.department,
     this.manager,
     this.salary,
+    this.baseSalary,
+    this.allowances,
+    this.deductions,
     this.accountNumber,
     this.bankName,
     this.ifscCode,
@@ -86,6 +93,29 @@ class Employee {
       return DateTime.now();
     }
 
+    final rawSalary = json['salary']?.toString();
+    double? baseVal;
+    double? allowancesVal;
+    double? deductionsVal;
+    String? salaryVal = rawSalary;
+
+    if (rawSalary != null && rawSalary.trim().startsWith('{')) {
+      try {
+        final Map<String, dynamic> map = jsonDecode(rawSalary);
+        final b = (map['b'] ?? 0.0).toDouble();
+        final a = (map['a'] ?? 0.0).toDouble();
+        final d = (map['d'] ?? 0.0).toDouble();
+        baseVal = b;
+        allowancesVal = a;
+        deductionsVal = d;
+        salaryVal = (b + a - d).round().toString();
+      } catch (e) {
+        print('Failed to parse salary JSON: $e');
+      }
+    } else if (rawSalary != null) {
+      baseVal = double.tryParse(rawSalary);
+    }
+
     return Employee(
       id: json['id'] ?? '',
       userId: json['user_id'] ?? '',
@@ -106,7 +136,10 @@ class Employee {
           Designation.fromString(json['designation'] ?? 'intern'),
       department: json['department'] ?? '',
       manager: json['manager'],
-      salary: json['salary'],
+      salary: salaryVal,
+      baseSalary: baseVal,
+      allowances: allowancesVal,
+      deductions: deductionsVal,
       accountNumber: json['account_number'],
       bankName: json['bank_name'],
       ifscCode: json['ifsc_code'],
@@ -123,6 +156,15 @@ class Employee {
   }
 
   Map<String, dynamic> toJson() {
+    String? serializedSalary = salary;
+    if (baseSalary != null || allowances != null || deductions != null) {
+      serializedSalary = jsonEncode({
+        'b': (baseSalary ?? 0.0).round(),
+        'a': (allowances ?? 0.0).round(),
+        'd': (deductions ?? 0.0).round(),
+      });
+    }
+
     return {
       'id': id,
       'user_id': userId,
@@ -142,7 +184,7 @@ class Employee {
       'designation': designation.toStringValue(),
       'department': department,
       'manager': manager,
-      'salary': salary,
+      'salary': serializedSalary,
       'account_number': accountNumber,
       'bank_name': bankName,
       'ifsc_code': ifscCode,
@@ -176,6 +218,9 @@ class Employee {
     String? department,
     String? manager,
     String? salary,
+    double? baseSalary,
+    double? allowances,
+    double? deductions,
     String? accountNumber,
     String? bankName,
     String? ifscCode,
@@ -207,6 +252,9 @@ class Employee {
       department: department ?? this.department,
       manager: manager ?? this.manager,
       salary: salary ?? this.salary,
+      baseSalary: baseSalary ?? this.baseSalary,
+      allowances: allowances ?? this.allowances,
+      deductions: deductions ?? this.deductions,
       accountNumber: accountNumber ?? this.accountNumber,
       bankName: bankName ?? this.bankName,
       ifscCode: ifscCode ?? this.ifscCode,
