@@ -1,41 +1,45 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hr_management_system/core/theme/app_theme.dart';
 import 'package:hr_management_system/data/models/payroll_model.dart';
-import 'package:hr_management_system/data/models/mock_data.dart';
+import 'package:hr_management_system/data/providers/payroll_provider.dart';
+import 'package:hr_management_system/data/providers/employee_provider.dart';
+import 'package:hr_management_system/data/models/employee_model.dart';
+import 'package:hr_management_system/core/enums/app_enums.dart';
 import 'package:hr_management_system/presentation/screens/payroll_form_screen.dart';
 
-class PayrollListScreen extends StatefulWidget {
+class PayrollListScreen extends ConsumerStatefulWidget {
   const PayrollListScreen({super.key});
 
   @override
-  State<PayrollListScreen> createState() => _PayrollListScreenState();
+  ConsumerState<PayrollListScreen> createState() => _PayrollListScreenState();
 }
 
-class _PayrollListScreenState extends State<PayrollListScreen> {
-  late List<Payroll> _payrolls;
+class _PayrollListScreenState extends ConsumerState<PayrollListScreen> {
   String _searchQuery = '';
 
-  @override
-  void initState() {
-    super.initState();
-    _payrolls = List.from(MockDataProvider.mockPayroll);
-  }
-
-  List<Payroll> get _filteredPayrolls {
-    if (_searchQuery.isEmpty) return _payrolls;
-    return _payrolls.where((payroll) {
-      final emp = MockDataProvider.mockEmployees.firstWhere(
-        (e) => e.id == payroll.employeeId,
-      );
-      return emp.fullName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          payroll.getMonthName().toLowerCase().contains(_searchQuery.toLowerCase());
+  List<Payroll> _filteredPayrolls(List<Payroll> payrolls) {
+    if (_searchQuery.isEmpty) return payrolls;
+    return payrolls.where((payroll) {
+      return payroll.getMonthName().toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          payroll.employeeId.toLowerCase().contains(_searchQuery.toLowerCase());
     }).toList();
   }
 
-  void _deletePayroll(String id) {
-    setState(() {
-      _payrolls.removeWhere((p) => p.id == id);
-    });
+  Future<void> _deletePayroll(String id) async {
+    final success = await ref.read(payrollProvider.notifier).deletePayroll(id);
+    if (!success) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to delete payroll record'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Payroll record deleted'),
@@ -86,11 +90,13 @@ class _PayrollListScreenState extends State<PayrollListScreen> {
 
           // Payroll List
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _filteredPayrolls.length,
-              itemBuilder: (context, index) {
-                final payroll = _filteredPayrolls[index];
+            child: ref.watch(payrollProvider).isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _filteredPayrolls(ref.watch(payrollProvider).payrolls).length,
+                    itemBuilder: (context, index) {
+                      final payroll = _filteredPayrolls(ref.watch(payrollProvider).payrolls)[index];
                 return _buildPayrollCard(context, payroll);
               },
             ),
@@ -98,18 +104,16 @@ class _PayrollListScreenState extends State<PayrollListScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const PayrollFormScreen(),
-            ),
-          );
-          if (result != null && result is Payroll) {
-            setState(() {
-              _payrolls.insert(0, result);
-            });
-          }
+          onPressed: () async {
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const PayrollFormScreen(),
+              ),
+            );
+            if (result != null && result is Payroll) {
+              await ref.read(payrollProvider.notifier).addPayroll(result);
+            }
         },
         backgroundColor: AppTheme.primaryColor,
         icon: const Icon(Icons.receipt_long, color: Colors.white),
@@ -119,10 +123,15 @@ class _PayrollListScreenState extends State<PayrollListScreen> {
   }
 
   Widget _buildPayrollCard(BuildContext context, Payroll payroll) {
-    final employee = MockDataProvider.mockEmployees.firstWhere(
-      (e) => e.id == payroll.employeeId,
-      orElse: () => MockDataProvider.mockEmployees.first,
-    );
+    final employeeState = ref.watch(employeeProvider);
+    Employee? employee;
+    if (!employeeState.isLoading && employeeState.employees.isNotEmpty) {
+      try {
+        employee = employeeState.employees.firstWhere((e) => e.id == payroll.employeeId);
+      } catch (_) {
+        employee = null;
+      }
+    }
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -130,21 +139,16 @@ class _PayrollListScreenState extends State<PayrollListScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => PayrollFormScreen(payroll: payroll),
-            ),
-          );
-          if (result != null && result is Payroll) {
-            setState(() {
-              final index = _payrolls.indexWhere((p) => p.id == result.id);
-              if (index != -1) {
-                _payrolls[index] = result;
-              }
-            });
-          }
+          onTap: () async {
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => PayrollFormScreen(payroll: payroll),
+              ),
+            );
+            if (result != null && result is Payroll) {
+              await ref.read(payrollProvider.notifier).updatePayroll(result);
+            }
         },
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -156,7 +160,9 @@ class _PayrollListScreenState extends State<PayrollListScreen> {
                   radius: 30,
                   backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
                   child: Text(
-                    employee.firstName[0] + employee.lastName[0],
+                    employee != null
+                        ? (employee.firstName.isNotEmpty ? employee.firstName[0] : '') + (employee.lastName.isNotEmpty ? employee.lastName[0] : '')
+                        : '?',
                     style: const TextStyle(
                       color: AppTheme.primaryColor,
                       fontWeight: FontWeight.bold,
@@ -171,7 +177,7 @@ class _PayrollListScreenState extends State<PayrollListScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      employee.fullName,
+                      employee?.fullName ?? payroll.employeeId,
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -179,8 +185,8 @@ class _PayrollListScreenState extends State<PayrollListScreen> {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      '${payroll.getMonthName()} ${payroll.year}',
+                        Text(
+                          '${payroll.getMonthName()} ${payroll.year}',
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,

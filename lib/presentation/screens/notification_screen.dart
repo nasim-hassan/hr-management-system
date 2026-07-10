@@ -1,31 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hr_management_system/core/enums/app_enums.dart';
 import 'package:hr_management_system/core/theme/app_theme.dart';
-import 'package:hr_management_system/data/models/notification_model.dart'
-    as app;
-import 'package:hr_management_system/data/models/mock_data.dart';
+import 'package:hr_management_system/data/models/notification_model.dart' as app;
+import 'package:hr_management_system/data/providers/notification_provider.dart';
 
-class NotificationScreen extends StatefulWidget {
+class NotificationScreen extends ConsumerStatefulWidget {
   const NotificationScreen({super.key});
 
   @override
-  State<NotificationScreen> createState() => _NotificationScreenState();
+  ConsumerState<NotificationScreen> createState() => _NotificationScreenState();
 }
 
-class _NotificationScreenState extends State<NotificationScreen> {
-  late List<app.Notification> _notifications;
+class _NotificationScreenState extends ConsumerState<NotificationScreen> {
   String _searchQuery = '';
   NotificationType? _selectedTypeFilter;
   String _readFilter = 'all'; // 'all', 'unread', 'read'
 
-  @override
-  void initState() {
-    super.initState();
-    _notifications = List.from(MockDataProvider.mockNotifications);
-  }
-
-  List<app.Notification> get _filteredNotifications {
-    return _notifications.where((n) {
+  List<app.Notification> _filteredNotifications(List<app.Notification> notifications) {
+    final list = notifications.where((n) {
       // Search filter
       if (_searchQuery.isNotEmpty) {
         final query = _searchQuery.toLowerCase();
@@ -42,62 +35,44 @@ class _NotificationScreenState extends State<NotificationScreen> {
       if (_readFilter == 'unread' && n.isRead) return false;
       if (_readFilter == 'read' && !n.isRead) return false;
       return true;
-    }).toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    }).toList();
+    list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return list;
   }
 
-  int get _unreadCount => _notifications.where((n) => !n.isRead).length;
+  int _unreadCount(List<app.Notification> notifications) => notifications.where((n) => !n.isRead).length;
 
-  void _markAsRead(app.Notification notification) {
-    setState(() {
-      final index = _notifications.indexWhere((n) => n.id == notification.id);
-      if (index != -1) {
-        _notifications[index] = notification.copyWith(
-          isRead: true,
-          readAt: DateTime.now(),
-        );
-      }
-    });
+  Future<void> _markAsRead(app.Notification notification) async {
+    await ref.read(notificationProvider.notifier).markAsRead(notification.id);
   }
 
-  void _markAllAsRead() {
-    setState(() {
-      _notifications = _notifications.map((n) {
-        if (!n.isRead) {
-          return n.copyWith(isRead: true, readAt: DateTime.now());
-        }
-        return n;
-      }).toList();
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('All notifications marked as read'),
-        backgroundColor: AppTheme.successColor,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  void _deleteNotification(app.Notification notification) {
-    setState(() {
-      _notifications.removeWhere((n) => n.id == notification.id);
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Notification deleted'),
-        backgroundColor: AppTheme.errorColor,
-        behavior: SnackBarBehavior.floating,
-        action: SnackBarAction(
-          label: 'Undo',
-          textColor: Colors.white,
-          onPressed: () {
-            setState(() {
-              _notifications.add(notification);
-            });
-          },
+  Future<void> _markAllAsRead() async {
+    final state = ref.read(notificationProvider);
+    for (final n in state.notifications.where((n) => !n.isRead)) {
+      await ref.read(notificationProvider.notifier).markAsRead(n.id);
+    }
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('All notifications marked as read'),
+          backgroundColor: AppTheme.successColor,
+          behavior: SnackBarBehavior.floating,
         ),
-      ),
-    );
+      );
+    }
+  }
+
+  Future<void> _deleteNotification(app.Notification notification) async {
+    final success = await ref.read(notificationProvider.notifier).deleteNotification(notification.id);
+    if (success && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Notification deleted'),
+          backgroundColor: AppTheme.errorColor,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   void _clearAllNotifications() {
@@ -113,14 +88,15 @@ class _NotificationScreenState extends State<NotificationScreen> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              setState(() => _notifications.clear());
+            onPressed: () async {
               Navigator.pop(ctx);
+              final state = ref.read(notificationProvider);
+              for (final n in state.notifications) {
+                await ref.read(notificationProvider.notifier).deleteNotification(n.id);
+              }
             },
-            style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.errorColor),
-            child:
-                const Text('Clear All', style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorColor),
+            child: const Text('Clear All', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -174,7 +150,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _filteredNotifications;
+    final state = ref.watch(notificationProvider);
+    final filtered = _filteredNotifications(state.notifications);
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
@@ -191,8 +168,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
           ),
         ),
         actions: [
-          if (_unreadCount > 0)
-            TextButton.icon(
+          if (_unreadCount(state.notifications) > 0)
+                TextButton.icon(
               onPressed: _markAllAsRead,
               icon: const Icon(Icons.done_all, color: Colors.white, size: 18),
               label: const Text('Read All',
@@ -296,7 +273,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                if (_unreadCount > 0) ...[
+                if (_unreadCount(state.notifications) > 0) ...[
                   const SizedBox(width: 8),
                   Container(
                     padding:
@@ -306,7 +283,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
-                      '$_unreadCount unread',
+                      '${_unreadCount(state.notifications)} unread',
                       style: const TextStyle(
                         color: AppTheme.errorColor,
                         fontSize: 12,
@@ -504,7 +481,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                             ),
                           ),
                           const Spacer(),
-                          Icon(Icons.access_time,
+                          const Icon(Icons.access_time,
                               size: 12,
                               color: AppTheme.textTertiaryColor),
                           const SizedBox(width: 4),

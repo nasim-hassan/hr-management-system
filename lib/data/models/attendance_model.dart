@@ -38,7 +38,7 @@ class Attendance {
 
   factory Attendance.fromJson(Map<String, dynamic> json) {
     // Helper to parse DATE or TIMESTAMP fields
-    DateTime _parseDateTime(dynamic value) {
+    DateTime parseDateTime(dynamic value) {
       if (value == null) return DateTime.now();
       if (value is String) {
         try {
@@ -56,14 +56,14 @@ class Attendance {
     }
 
     return Attendance(
-      id: json['id'] ?? '',
-      employeeId: json['employee_id'] ?? '',
-      date: _parseDateTime(json['date']),
+      id: json['id']?.toString() ?? '',
+      employeeId: json['employee_id']?.toString() ?? '',
+      date: parseDateTime(json['date']),
       checkInTime: json['check_in_time'] != null
-          ? _parseDateTime(json['check_in_time'])
+          ? parseDateTime(json['check_in_time'])
           : null,
       checkOutTime: json['check_out_time'] != null
-          ? _parseDateTime(json['check_out_time'])
+          ? parseDateTime(json['check_out_time'])
           : null,
       status: AttendanceStatus.fromString(
           json['status'] ?? AttendanceStatus.absent.toStringValue()),
@@ -71,9 +71,9 @@ class Attendance {
       location: json['location'],
       latitude: json['latitude'] != null ? (json['latitude'] as num).toDouble() : null,
       longitude: json['longitude'] != null ? (json['longitude'] as num).toDouble() : null,
-      createdAt: _parseDateTime(json['created_at']),
+      createdAt: parseDateTime(json['created_at']),
       updatedAt: json['updated_at'] != null
-          ? _parseDateTime(json['updated_at'])
+          ? parseDateTime(json['updated_at'])
           : null,
     );
   }

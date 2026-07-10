@@ -200,6 +200,7 @@ class _AttendanceFormScreenState extends ConsumerState<AttendanceFormScreen> {
                                   if (val != null) _selectedEmployeeId = val;
                                 });
                               },
+                              validator: (val) => val == null || val.isEmpty ? 'Please select an employee' : null,
                             ),
                             const SizedBox(height: 16),
                             InkWell(
@@ -293,6 +294,7 @@ class _AttendanceFormScreenState extends ConsumerState<AttendanceFormScreen> {
                                   if (val != null) _selectedStatus = val;
                                 });
                               },
+                              validator: (val) => val == null ? 'Please select an attendance status' : null,
                             ),
                             const SizedBox(height: 16),
                             TextFormField(

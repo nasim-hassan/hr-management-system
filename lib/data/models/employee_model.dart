@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:hr_management_system/core/enums/app_enums.dart';
 
 /// Employee Model - Extended employee information
@@ -21,7 +20,6 @@ class Employee {
   final Designation designation;
   final String department;
   final String? manager; // Manager's user ID
-  final String? salary;
   final double? baseSalary;
   final double? allowances;
   final double? deductions;
@@ -55,7 +53,6 @@ class Employee {
     required this.designation,
     required this.department,
     this.manager,
-    this.salary,
     this.baseSalary,
     this.allowances,
     this.deductions,
@@ -73,9 +70,12 @@ class Employee {
 
   String get fullName => '$firstName $lastName ($id)';
 
+  double get netSalary =>
+      (baseSalary ?? 0.0) + (allowances ?? 0.0) - (deductions ?? 0.0);
+
   factory Employee.fromJson(Map<String, dynamic> json) {
     // Helper to parse DATE or TIMESTAMP fields
-    DateTime _parseDateTime(dynamic value, {bool isDate = false}) {
+    DateTime parseDateTime(dynamic value, {bool isDate = false}) {
       if (value == null) return DateTime.now();
       if (value is String) {
         try {
@@ -94,31 +94,23 @@ class Employee {
     }
 
     final rawSalary = json['salary']?.toString();
-    double? baseVal;
-    double? allowancesVal;
-    double? deductionsVal;
-    String? salaryVal = rawSalary;
+    double? baseVal = json['base_salary'] != null
+        ? (json['base_salary'] as num).toDouble()
+        : null;
+    double? allowancesVal = json['allowances'] != null
+        ? (json['allowances'] as num).toDouble()
+        : null;
+    double? deductionsVal = json['deductions'] != null
+        ? (json['deductions'] as num).toDouble()
+        : null;
 
-    if (rawSalary != null && rawSalary.trim().startsWith('{')) {
-      try {
-        final Map<String, dynamic> map = jsonDecode(rawSalary);
-        final b = (map['b'] ?? 0.0).toDouble();
-        final a = (map['a'] ?? 0.0).toDouble();
-        final d = (map['d'] ?? 0.0).toDouble();
-        baseVal = b;
-        allowancesVal = a;
-        deductionsVal = d;
-        salaryVal = (b + a - d).round().toString();
-      } catch (e) {
-        print('Failed to parse salary JSON: $e');
-      }
-    } else if (rawSalary != null) {
+    if (baseVal == null && rawSalary != null) {
       baseVal = double.tryParse(rawSalary);
     }
 
     return Employee(
-      id: json['id'] ?? '',
-      userId: json['user_id'] ?? '',
+      id: json['id']?.toString() ?? '',
+      userId: json['user_id']?.toString() ?? '',
       firstName: json['first_name'] ?? '',
       lastName: json['last_name'] ?? '',
       email: json['email'] ?? '',
@@ -128,15 +120,14 @@ class Employee {
       state: json['state'],
       zipCode: json['zip_code'],
       country: json['country'],
-      dateOfBirth: _parseDateTime(json['date_of_birth'], isDate: true),
+      dateOfBirth: parseDateTime(json['date_of_birth'], isDate: true),
       gender: json['gender'],
       maritalStatus: json['marital_status'],
-      dateOfJoining: _parseDateTime(json['date_of_joining']),
+      dateOfJoining: parseDateTime(json['date_of_joining']),
       designation:
           Designation.fromString(json['designation'] ?? 'intern'),
       department: json['department'] ?? '',
       manager: json['manager'],
-      salary: salaryVal,
       baseSalary: baseVal,
       allowances: allowancesVal,
       deductions: deductionsVal,
@@ -148,23 +139,14 @@ class Employee {
       emergencyContact: json['emergency_contact'],
       emergencyContactNumber: json['emergency_contact_number'],
       isActive: json['is_active'] ?? true,
-      createdAt: _parseDateTime(json['created_at']),
+      createdAt: parseDateTime(json['created_at']),
       updatedAt: json['updated_at'] != null
-          ? _parseDateTime(json['updated_at'])
+          ? parseDateTime(json['updated_at'])
           : null,
     );
   }
 
   Map<String, dynamic> toJson() {
-    String? serializedSalary = salary;
-    if (baseSalary != null || allowances != null || deductions != null) {
-      serializedSalary = jsonEncode({
-        'b': (baseSalary ?? 0.0).round(),
-        'a': (allowances ?? 0.0).round(),
-        'd': (deductions ?? 0.0).round(),
-      });
-    }
-
     return {
       'id': id,
       'user_id': userId,
@@ -184,7 +166,9 @@ class Employee {
       'designation': designation.toStringValue(),
       'department': department,
       'manager': manager,
-      'salary': serializedSalary,
+      'base_salary': baseSalary,
+      'allowances': allowances,
+      'deductions': deductions,
       'account_number': accountNumber,
       'bank_name': bankName,
       'ifsc_code': ifscCode,
@@ -217,7 +201,6 @@ class Employee {
     Designation? designation,
     String? department,
     String? manager,
-    String? salary,
     double? baseSalary,
     double? allowances,
     double? deductions,
@@ -251,7 +234,6 @@ class Employee {
       designation: designation ?? this.designation,
       department: department ?? this.department,
       manager: manager ?? this.manager,
-      salary: salary ?? this.salary,
       baseSalary: baseSalary ?? this.baseSalary,
       allowances: allowances ?? this.allowances,
       deductions: deductions ?? this.deductions,
@@ -261,8 +243,7 @@ class Employee {
       panNumber: panNumber ?? this.panNumber,
       aadharNumber: aadharNumber ?? this.aadharNumber,
       emergencyContact: emergencyContact ?? this.emergencyContact,
-      emergencyContactNumber:
-          emergencyContactNumber ?? this.emergencyContactNumber,
+      emergencyContactNumber: emergencyContactNumber ?? this.emergencyContactNumber,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,

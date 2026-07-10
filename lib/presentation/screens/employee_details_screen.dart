@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hr_management_system/core/theme/app_theme.dart';
 import 'package:hr_management_system/data/models/employee_model.dart';
-import 'package:hr_management_system/data/models/mock_data.dart';
+import 'package:hr_management_system/data/providers/employee_provider.dart';
 import 'package:hr_management_system/config/app_routes.dart';
 
-class EmployeeDetailsScreen extends StatefulWidget {
+class EmployeeDetailsScreen extends ConsumerStatefulWidget {
   final Employee employee;
 
   const EmployeeDetailsScreen({super.key, required this.employee});
 
   @override
-  State<EmployeeDetailsScreen> createState() => _EmployeeDetailsScreenState();
+  ConsumerState<EmployeeDetailsScreen> createState() => _EmployeeDetailsScreenState();
 }
 
-class _EmployeeDetailsScreenState extends State<EmployeeDetailsScreen> {
+class _EmployeeDetailsScreenState extends ConsumerState<EmployeeDetailsScreen> {
   late String _employeeId;
 
   @override
@@ -24,11 +25,16 @@ class _EmployeeDetailsScreenState extends State<EmployeeDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Retrieve latest employee data from the mock provider
-    final employee = MockDataProvider.mockEmployees.firstWhere(
-      (emp) => emp.id == _employeeId,
-      orElse: () => widget.employee,
-    );
+    // Retrieve latest employee data from the employee provider
+    final employeeState = ref.watch(employeeProvider);
+    Employee employee = widget.employee;
+    if (!employeeState.isLoading && employeeState.employees.isNotEmpty) {
+      try {
+        employee = employeeState.employees.firstWhere((emp) => emp.id == _employeeId);
+      } catch (_) {
+        employee = widget.employee;
+      }
+    }
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
@@ -82,7 +88,7 @@ class _EmployeeDetailsScreenState extends State<EmployeeDetailsScreen> {
                       _buildInfoRow('Base Salary', employee.baseSalary != null ? '₹${employee.baseSalary!.round()}' : 'N/A'),
                       _buildInfoRow('Allowances', employee.allowances != null ? '+₹${employee.allowances!.round()}' : 'N/A'),
                       _buildInfoRow('Deductions', employee.deductions != null ? '-₹${employee.deductions!.round()}' : 'N/A'),
-                      _buildHighlightedInfoRow('Net Monthly Salary', employee.salary != null ? '₹${employee.salary}' : 'N/A', Colors.green),
+                      _buildHighlightedInfoRow('Net Monthly Salary', employee.baseSalary != null ? '₹${employee.netSalary.toStringAsFixed(0)}' : 'N/A', Colors.green),
                     ],
                   ),
                   const SizedBox(height: 16),

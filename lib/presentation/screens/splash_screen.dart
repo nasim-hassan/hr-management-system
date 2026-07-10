@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:async';
 import 'package:hr_management_system/core/theme/app_theme.dart';
 import 'package:hr_management_system/data/providers/auth_provider.dart';
 
@@ -15,6 +16,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
+
+  late Timer? _navigationTimer;
 
   @override
   void initState() {
@@ -39,14 +42,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     _animationController.forward();
 
-    // Check auth status after delay
-    _checkAuthStatusAndNavigate();
+    // Check auth status after delay via a cancellable timer
+    _navigationTimer = Timer(const Duration(seconds: 3), () async {
+      await _checkAuthStatusAndNavigate();
+    });
   }
 
   Future<void> _checkAuthStatusAndNavigate() async {
-    // Wait for animations and splash screen to display
-    await Future.delayed(const Duration(seconds: 3));
-
     if (!mounted) return;
 
     // Check if user is authenticated
@@ -70,6 +72,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   @override
   void dispose() {
+    _navigationTimer?.cancel();
     _animationController.dispose();
     super.dispose();
   }

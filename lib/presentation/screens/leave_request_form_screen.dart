@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hr_management_system/core/theme/app_theme.dart';
 import 'package:hr_management_system/data/models/leave_request_model.dart';
-import 'package:hr_management_system/data/models/mock_data.dart';
+import 'package:hr_management_system/data/providers/employee_provider.dart';
 import 'package:hr_management_system/core/enums/app_enums.dart';
 
-class LeaveRequestFormScreen extends StatefulWidget {
+class LeaveRequestFormScreen extends ConsumerStatefulWidget {
   final LeaveRequest? leaveRequest; // If null, Add Mode. If provided, Edit Mode.
 
   const LeaveRequestFormScreen({super.key, this.leaveRequest});
 
   @override
-  State<LeaveRequestFormScreen> createState() => _LeaveRequestFormScreenState();
+  ConsumerState<LeaveRequestFormScreen> createState() => _LeaveRequestFormScreenState();
 }
 
-class _LeaveRequestFormScreenState extends State<LeaveRequestFormScreen> {
+class _LeaveRequestFormScreenState extends ConsumerState<LeaveRequestFormScreen> {
   final _formKey = GlobalKey<FormState>();
   
   String? _selectedEmployeeId;
@@ -38,9 +39,7 @@ class _LeaveRequestFormScreenState extends State<LeaveRequestFormScreen> {
       _endDate = widget.leaveRequest!.endDate;
       _selectedStatus = widget.leaveRequest!.status;
     } else {
-      if (MockDataProvider.mockEmployees.isNotEmpty) {
-        _selectedEmployeeId = MockDataProvider.mockEmployees.first.id;
-      }
+      // default will be set from employee provider in build
     }
   }
 
@@ -121,6 +120,14 @@ class _LeaveRequestFormScreenState extends State<LeaveRequestFormScreen> {
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.leaveRequest != null;
+    final employeeState = ref.watch(employeeProvider);
+    if (!isEdit && _selectedEmployeeId == null && !employeeState.isLoading && employeeState.employees.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        setState(() {
+          _selectedEmployeeId = employeeState.employees.first.id;
+        });
+      });
+    }
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
@@ -158,17 +165,20 @@ class _LeaveRequestFormScreenState extends State<LeaveRequestFormScreen> {
                       ),
                     ),
                     initialValue: _selectedEmployeeId,
-                    items: MockDataProvider.mockEmployees.map((e) {
+                    items: employeeState.employees.map((e) {
                       return DropdownMenuItem(
                         value: e.id,
                         child: Text(e.fullName),
                       );
                     }).toList(),
-                    onChanged: isEdit ? null : (val) {
-                      setState(() {
-                        if (val != null) _selectedEmployeeId = val;
-                      });
-                    },
+                    onChanged: isEdit
+                        ? null
+                        : (val) {
+                            setState(() {
+                              if (val != null) _selectedEmployeeId = val;
+                            });
+                          },
+                    validator: (val) => val == null || val.isEmpty ? 'Please select an employee' : null,
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<LeaveType>(
@@ -194,6 +204,7 @@ class _LeaveRequestFormScreenState extends State<LeaveRequestFormScreen> {
                         if (val != null) _selectedLeaveType = val;
                       });
                     },
+                    validator: (val) => val == null ? 'Please select a leave type' : null,
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -295,6 +306,7 @@ class _LeaveRequestFormScreenState extends State<LeaveRequestFormScreen> {
                         if (val != null) _selectedStatus = val;
                       });
                     },
+                    validator: (val) => val == null ? 'Please select a leave request status' : null,
                   ),
                   if (_selectedStatus == LeaveStatus.rejected) ...[
                     const SizedBox(height: 16),

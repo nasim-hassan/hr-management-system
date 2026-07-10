@@ -57,8 +57,8 @@ class Payroll {
 
   factory Payroll.fromJson(Map<String, dynamic> json) {
     return Payroll(
-      id: json['id'] ?? '',
-      employeeId: json['employee_id'] ?? '',
+      id: json['id']?.toString() ?? '',
+      employeeId: json['employee_id']?.toString() ?? '',
       month: json['month'] ?? DateTime.now().month,
       year: json['year'] ?? DateTime.now().year,
       baseSalary: (json['base_salary'] ?? 0).toDouble(),

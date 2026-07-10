@@ -1,30 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hr_management_system/core/enums/app_enums.dart';
 import 'package:hr_management_system/core/theme/app_theme.dart';
 import 'package:hr_management_system/data/models/report_model.dart';
-import 'package:hr_management_system/data/models/mock_data.dart';
+import 'package:hr_management_system/data/providers/report_provider.dart';
 import 'package:hr_management_system/presentation/screens/report_form_screen.dart';
 
-class ReportListScreen extends StatefulWidget {
+class ReportListScreen extends ConsumerStatefulWidget {
   const ReportListScreen({super.key});
 
   @override
-  State<ReportListScreen> createState() => _ReportListScreenState();
+  ConsumerState<ReportListScreen> createState() => _ReportListScreenState();
 }
 
-class _ReportListScreenState extends State<ReportListScreen> {
+class _ReportListScreenState extends ConsumerState<ReportListScreen> {
   late List<Report> _reports;
   String _searchQuery = '';
   ReportType? _filterType;
 
-  @override
-  void initState() {
-    super.initState();
-    _reports = List.from(MockDataProvider.mockReports);
-  }
-
-  List<Report> get _filteredReports {
-    return _reports.where((report) {
+  List<Report> _filteredReports(List<Report> reports) {
+    return reports.where((report) {
       final matchesSearch = _searchQuery.isEmpty ||
           report.title.toLowerCase().contains(_searchQuery.toLowerCase());
       final matchesType = _filterType == null || report.type == _filterType;
@@ -32,10 +27,20 @@ class _ReportListScreenState extends State<ReportListScreen> {
     }).toList();
   }
 
-  void _deleteReport(String id) {
-    setState(() {
-      _reports.removeWhere((r) => r.id == id);
-    });
+  Future<void> _deleteReport(String id) async {
+    final success = await ref.read(reportProvider.notifier).deleteReport(id);
+    if (!success) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to delete report'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Report deleted'),
@@ -131,11 +136,13 @@ class _ReportListScreenState extends State<ReportListScreen> {
 
           // Report List
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _filteredReports.length,
-              itemBuilder: (context, index) {
-                final report = _filteredReports[index];
+            child: ref.watch(reportProvider).isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _filteredReports(ref.watch(reportProvider).reports).length,
+                    itemBuilder: (context, index) {
+                      final report = _filteredReports(ref.watch(reportProvider).reports)[index];
                 return _buildReportCard(context, report);
               },
             ),
@@ -143,18 +150,16 @@ class _ReportListScreenState extends State<ReportListScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const ReportFormScreen(),
-            ),
-          );
-          if (result != null && result is Report) {
-            setState(() {
-              _reports.insert(0, result);
-            });
-          }
+          onPressed: () async {
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const ReportFormScreen(),
+              ),
+            );
+            if (result != null && result is Report) {
+              await ref.read(reportProvider.notifier).addReport(result);
+            }
         },
         backgroundColor: AppTheme.primaryColor,
         icon: const Icon(Icons.add, color: Colors.white),
@@ -170,21 +175,16 @@ class _ReportListScreenState extends State<ReportListScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ReportFormScreen(report: report),
-            ),
-          );
-          if (result != null && result is Report) {
-            setState(() {
-              final index = _reports.indexWhere((r) => r.id == result.id);
-              if (index != -1) {
-                _reports[index] = result;
-              }
-            });
-          }
+          onTap: () async {
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ReportFormScreen(report: report),
+              ),
+            );
+            if (result != null && result is Report) {
+              await ref.read(reportProvider.notifier).updateReport(result);
+            }
         },
         child: Padding(
           padding: const EdgeInsets.all(16),

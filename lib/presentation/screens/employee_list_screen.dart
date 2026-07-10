@@ -180,9 +180,9 @@ class _EmployeeListScreenState extends ConsumerState<EmployeeListScreen> {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    if (employee.salary != null)
+                    if (employee.baseSalary != null)
                       Text(
-                        'Salary: ₹${employee.salary}',
+                        'Salary: ₹${employee.netSalary.toStringAsFixed(0)}',
                         style: const TextStyle(
                           fontSize: 12,
                           color: AppTheme.accentColor,

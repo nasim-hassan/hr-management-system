@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hr_management_system/core/theme/app_theme.dart';
 import 'package:hr_management_system/data/models/payroll_model.dart';
-import 'package:hr_management_system/data/models/mock_data.dart';
+import 'package:hr_management_system/data/providers/employee_provider.dart';
+import 'package:hr_management_system/data/models/employee_model.dart';
 
-class PayrollFormScreen extends StatefulWidget {
+class PayrollFormScreen extends ConsumerStatefulWidget {
   final Payroll? payroll;
 
   const PayrollFormScreen({super.key, this.payroll});
 
   @override
-  State<PayrollFormScreen> createState() => _PayrollFormScreenState();
+  ConsumerState<PayrollFormScreen> createState() => _PayrollFormScreenState();
 }
 
-class _PayrollFormScreenState extends State<PayrollFormScreen> {
+class _PayrollFormScreenState extends ConsumerState<PayrollFormScreen> {
   final _formKey = GlobalKey<FormState>();
 
   String? _selectedEmployeeId;
@@ -45,10 +47,6 @@ class _PayrollFormScreenState extends State<PayrollFormScreen> {
       _paymentDate = widget.payroll!.paymentDate;
       _isPaid = widget.payroll!.isPaid;
       _netSalary = widget.payroll!.netSalary;
-    } else {
-      if (MockDataProvider.mockEmployees.isNotEmpty) {
-        _selectedEmployeeId = MockDataProvider.mockEmployees.first.id;
-      }
     }
 
     _baseSalaryController.addListener(_calculateNetSalary);
@@ -126,6 +124,19 @@ class _PayrollFormScreenState extends State<PayrollFormScreen> {
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.payroll != null;
+    final employeeState = ref.watch(employeeProvider);
+    if (!isEdit && _selectedEmployeeId == null && !employeeState.isLoading && employeeState.employees.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        setState(() {
+          _selectedEmployeeId = employeeState.employees.first.id;
+          // auto-fill if needed
+          final emp = employeeState.employees.first;
+          if (emp.baseSalary != null) _baseSalaryController.text = emp.baseSalary!.round().toString();
+          if (emp.allowances != null) _allowancesController.text = emp.allowances!.round().toString();
+          if (emp.deductions != null) _deductionsController.text = emp.deductions!.round().toString();
+        });
+      });
+    }
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
@@ -163,26 +174,28 @@ class _PayrollFormScreenState extends State<PayrollFormScreen> {
                       ),
                     ),
                     initialValue: _selectedEmployeeId,
-                    items: MockDataProvider.mockEmployees.map((e) {
+                    items: employeeState.employees.map((e) {
                       return DropdownMenuItem(
                         value: e.id,
                         child: Text(e.fullName),
                       );
                     }).toList(),
-                    onChanged: isEdit ? null : (val) {
-                      setState(() {
-                        if (val != null) {
-                          _selectedEmployeeId = val;
-                          // Auto-fill breakdown if adding new
-                          if (!isEdit) {
-                            final emp = MockDataProvider.mockEmployees.firstWhere((e) => e.id == val);
-                            _baseSalaryController.text = emp.baseSalary?.round().toString() ?? emp.salary ?? '';
-                            _allowancesController.text = emp.allowances?.round().toString() ?? '0';
-                            _deductionsController.text = emp.deductions?.round().toString() ?? '0';
-                          }
-                        }
-                      });
-                    },
+                    onChanged: isEdit
+                        ? null
+                        : (val) {
+                            setState(() {
+                              if (val != null) {
+                                _selectedEmployeeId = val;
+                                // Auto-fill breakdown if adding new
+                                if (!isEdit) {
+                                  final emp = employeeState.employees.firstWhere((e) => e.id == val);
+                                  _baseSalaryController.text = emp.baseSalary?.round().toString() ?? '';
+                                  _allowancesController.text = emp.allowances?.round().toString() ?? '0';
+                                  _deductionsController.text = emp.deductions?.round().toString() ?? '0';
+                                }
+                              }
+                            });
+                          },
                     validator: (val) => val == null ? 'Please select an employee' : null,
                   ),
                   const SizedBox(height: 16),
@@ -376,7 +389,7 @@ class _PayrollFormScreenState extends State<PayrollFormScreen> {
                     title: const Text('Status'),
                     subtitle: Text(_isPaid ? 'Paid' : 'Pending'),
                     value: _isPaid,
-                    activeColor: Colors.green,
+                    activeThumbColor: Colors.green,
                     onChanged: (val) {
                       setState(() {
                         _isPaid = val;

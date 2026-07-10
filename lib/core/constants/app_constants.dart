@@ -20,6 +20,7 @@ class AppConstants {
   static const String leaveTypesTable = 'leave_types';
   static const String payrollTable = 'payroll';
   static const String payslipsTable = 'payslips';
+  static const String holidaysTable = 'holidays';
   static const String notificationsTable = 'notifications';
   static const String reportsTable = 'reports';
 

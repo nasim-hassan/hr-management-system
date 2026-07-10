@@ -78,7 +78,7 @@ files=(
     "lib/main.dart"
     "lib/config/environment.dart"
     "lib/core/theme/app_theme.dart"
-    "lib/core/enums/enums.dart"
+    "lib/core/enums/app_enums.dart"
     ".env.example"
     "README.md"
     "ARCHITECTURE.md"

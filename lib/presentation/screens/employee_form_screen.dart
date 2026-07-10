@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hr_management_system/core/theme/app_theme.dart';
 import 'package:hr_management_system/data/models/employee_model.dart';
-import 'package:hr_management_system/data/models/mock_data.dart';
+// Mock data no longer used here; employeeProvider handles storage
 import 'package:hr_management_system/core/enums/app_enums.dart';
 import 'package:hr_management_system/data/providers/employee_provider.dart';
 
@@ -93,7 +93,6 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
       final baseSalary = double.tryParse(_baseSalaryController.text) ?? 0.0;
       final allowances = double.tryParse(_allowancesController.text) ?? 0.0;
       final deductions = double.tryParse(_deductionsController.text) ?? 0.0;
-      final netSalaryVal = baseSalary + allowances - deductions;
       
       // Show loading dialog
       showDialog(
@@ -103,11 +102,11 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
       );
 
       try {
-        if (widget.employee == null) {
+          if (widget.employee == null) {
           // Add Mode
           final newEmployee = Employee(
             id: id,
-            userId: 'user_$id',
+            userId: '',
             firstName: firstName,
             lastName: lastName,
             email: email,
@@ -116,7 +115,6 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
             dateOfJoining: DateTime.now(),
             designation: _selectedDesignation,
             department: department,
-            salary: netSalaryVal.round().toString(),
             baseSalary: baseSalary,
             allowances: allowances,
             deductions: deductions,
@@ -125,12 +123,7 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
           );
           
           final success = await ref.read(employeeProvider.notifier).addEmployee(newEmployee);
-          
-          if (success) {
-            MockDataProvider.mockEmployees.add(newEmployee);
-          } else {
-            throw Exception('Failed to add employee to the system');
-          }
+          if (!success) throw Exception('Failed to add employee to the system');
         } else {
           // Edit Mode
           final updatedEmployee = widget.employee!.copyWith(
@@ -140,7 +133,6 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
             phoneNumber: phone,
             department: department,
             designation: _selectedDesignation,
-            salary: netSalaryVal.round().toString(),
             baseSalary: baseSalary,
             allowances: allowances,
             deductions: deductions,
@@ -149,15 +141,7 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
           );
           
           final success = await ref.read(employeeProvider.notifier).updateEmployee(updatedEmployee);
-          
-          if (success) {
-            final index = MockDataProvider.mockEmployees.indexWhere((emp) => emp.id == widget.employee!.id);
-            if (index != -1) {
-              MockDataProvider.mockEmployees[index] = updatedEmployee;
-            }
-          } else {
-            throw Exception('Failed to update employee in the system');
-          }
+          if (!success) throw Exception('Failed to update employee in the system');
         }
 
         if (mounted) {
@@ -221,8 +205,8 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
                     enabled: widget.employee == null,
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) return 'Required';
-                      if (widget.employee == null) {
-                        final exists = MockDataProvider.mockEmployees.any(
+                        if (widget.employee == null) {
+                        final exists = ref.read(employeeProvider).employees.any(
                           (emp) => emp.id.trim().toLowerCase() == v.trim().toLowerCase(),
                         );
                         if (exists) return 'Employee ID already exists';
@@ -304,6 +288,7 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
                         if (val != null) _selectedDesignation = val;
                       });
                     },
+                    validator: (val) => val == null ? 'Please select a designation' : null,
                   ),
                   const SizedBox(height: 16),
                   SwitchListTile(

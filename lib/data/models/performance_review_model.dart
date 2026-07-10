@@ -40,9 +40,9 @@ class PerformanceReview {
 
   factory PerformanceReview.fromJson(Map<String, dynamic> json) {
     return PerformanceReview(
-      id: json['id'] ?? '',
-      employeeId: json['employee_id'] ?? '',
-      reviewedBy: json['reviewed_by'] ?? '',
+      id: json['id']?.toString() ?? '',
+      employeeId: json['employee_id']?.toString() ?? '',
+      reviewedBy: json['reviewed_by']?.toString() ?? '',
       reviewYear: json['review_year'] ?? DateTime.now().year,
       reviewQuarter: json['review_quarter'] ?? 1,
       overallRating: (json['overall_rating'] ?? 0).toDouble(),

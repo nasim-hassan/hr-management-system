@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hr_management_system/core/theme/app_theme.dart';
-import 'package:hr_management_system/data/models/mock_data.dart';
+import 'package:hr_management_system/data/providers/notification_provider.dart';
 import 'package:hr_management_system/data/providers/auth_provider.dart';
 import 'package:hr_management_system/presentation/screens/dashboard_screen.dart';
 import 'package:hr_management_system/presentation/screens/employee_list_screen.dart';
@@ -59,13 +59,12 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
     }
   }
 
-  int get _unreadNotificationCount =>
-      MockDataProvider.mockNotifications.where((n) => !n.isRead).length;
+  // Unread count is computed from notificationProvider at build time.
 
   @override
   Widget build(BuildContext context) {
     final isEmployeeScreen = _selectedIndex == 1;
-    final unreadCount = _unreadNotificationCount;
+    final unreadCount = ref.watch(notificationProvider).notifications.where((n) => !n.isRead).length;
 
     return Scaffold(
       appBar: AppBar(

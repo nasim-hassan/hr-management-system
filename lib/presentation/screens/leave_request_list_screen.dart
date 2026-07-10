@@ -1,43 +1,45 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hr_management_system/core/theme/app_theme.dart';
 import 'package:hr_management_system/data/models/leave_request_model.dart';
-import 'package:hr_management_system/data/models/mock_data.dart';
+import 'package:hr_management_system/data/providers/leave_request_provider.dart';
+import 'package:hr_management_system/data/providers/employee_provider.dart';
+import 'package:hr_management_system/data/models/employee_model.dart';
 import 'package:hr_management_system/presentation/screens/leave_request_form_screen.dart';
 
-class LeaveRequestListScreen extends StatefulWidget {
+class LeaveRequestListScreen extends ConsumerStatefulWidget {
   const LeaveRequestListScreen({super.key});
 
   @override
-  State<LeaveRequestListScreen> createState() => _LeaveRequestListScreenState();
+  ConsumerState<LeaveRequestListScreen> createState() => _LeaveRequestListScreenState();
 }
 
-class _LeaveRequestListScreenState extends State<LeaveRequestListScreen> {
-  late List<LeaveRequest> _leaveRequests;
+class _LeaveRequestListScreenState extends ConsumerState<LeaveRequestListScreen> {
   String _searchQuery = '';
 
-  @override
-  void initState() {
-    super.initState();
-    _leaveRequests = List.from(MockDataProvider.mockLeaveRequests);
-  }
-
-  List<LeaveRequest> get _filteredLeaveRequests {
-    if (_searchQuery.isEmpty) return _leaveRequests;
-    return _leaveRequests.where((leave) {
-      final emp = MockDataProvider.mockEmployees.firstWhere(
-        (e) => e.id == leave.employeeId,
-        orElse: () => MockDataProvider.mockEmployees.first,
-      );
-      return emp.fullName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          leave.status.displayName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          leave.leaveType.displayName.toLowerCase().contains(_searchQuery.toLowerCase());
+  List<LeaveRequest> _filteredLeaveRequests(List<LeaveRequest> leaveRequests) {
+    if (_searchQuery.isEmpty) return leaveRequests;
+    return leaveRequests.where((leave) {
+      return leave.status.displayName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          leave.leaveType.displayName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          leave.employeeId.toLowerCase().contains(_searchQuery.toLowerCase());
     }).toList();
   }
 
-  void _deleteLeaveRequest(String id) {
-    setState(() {
-      _leaveRequests.removeWhere((leave) => leave.id == id);
-    });
+  Future<void> _deleteLeaveRequest(String id) async {
+    final success = await ref.read(leaveRequestProvider.notifier).deleteLeaveRequest(id);
+    if (!success) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to delete leave request'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Leave Request deleted'),
@@ -95,30 +97,30 @@ class _LeaveRequestListScreenState extends State<LeaveRequestListScreen> {
 
           // Leave Request List
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _filteredLeaveRequests.length,
-              itemBuilder: (context, index) {
-                final leaveRequest = _filteredLeaveRequests[index];
-                return _buildLeaveRequestCard(context, leaveRequest);
+            child: ref.watch(leaveRequestProvider).isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _filteredLeaveRequests(ref.watch(leaveRequestProvider).leaveRequests).length,
+                    itemBuilder: (context, index) {
+                      final leaveRequest = _filteredLeaveRequests(ref.watch(leaveRequestProvider).leaveRequests)[index];
+                      return _buildLeaveRequestCard(context, leaveRequest);
               },
             ),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const LeaveRequestFormScreen(),
-            ),
-          );
-          if (result != null && result is LeaveRequest) {
-            setState(() {
-              _leaveRequests.insert(0, result);
-            });
-          }
+          onPressed: () async {
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const LeaveRequestFormScreen(),
+              ),
+            );
+            if (result != null && result is LeaveRequest) {
+              await ref.read(leaveRequestProvider.notifier).addLeaveRequest(result);
+            }
         },
         backgroundColor: AppTheme.primaryColor,
         icon: const Icon(Icons.add, color: Colors.white),
@@ -128,10 +130,15 @@ class _LeaveRequestListScreenState extends State<LeaveRequestListScreen> {
   }
 
   Widget _buildLeaveRequestCard(BuildContext context, LeaveRequest leave) {
-    final employee = MockDataProvider.mockEmployees.firstWhere(
-      (e) => e.id == leave.employeeId,
-      orElse: () => MockDataProvider.mockEmployees.first,
-    );
+    final employeeState = ref.watch(employeeProvider);
+    Employee? employee;
+    if (!employeeState.isLoading && employeeState.employees.isNotEmpty) {
+      try {
+        employee = employeeState.employees.firstWhere((e) => e.id == leave.employeeId);
+      } catch (_) {
+        employee = null;
+      }
+    }
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -139,21 +146,16 @@ class _LeaveRequestListScreenState extends State<LeaveRequestListScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => LeaveRequestFormScreen(leaveRequest: leave),
-            ),
-          );
-          if (result != null && result is LeaveRequest) {
-            setState(() {
-              final index = _leaveRequests.indexWhere((l) => l.id == result.id);
-              if (index != -1) {
-                _leaveRequests[index] = result;
-              }
-            });
-          }
+          onTap: () async {
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => LeaveRequestFormScreen(leaveRequest: leave),
+              ),
+            );
+            if (result != null && result is LeaveRequest) {
+              await ref.read(leaveRequestProvider.notifier).updateLeaveRequest(result);
+            }
         },
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -165,7 +167,9 @@ class _LeaveRequestListScreenState extends State<LeaveRequestListScreen> {
                   radius: 30,
                   backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
                   child: Text(
-                    employee.firstName[0] + employee.lastName[0],
+                    employee != null
+                        ? (employee.firstName.isNotEmpty ? employee.firstName[0] : '') + (employee.lastName.isNotEmpty ? employee.lastName[0] : '')
+                        : '?',
                     style: const TextStyle(
                       color: AppTheme.primaryColor,
                       fontWeight: FontWeight.bold,
@@ -180,7 +184,7 @@ class _LeaveRequestListScreenState extends State<LeaveRequestListScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      employee.fullName,
+                      employee?.fullName ?? leave.employeeId,
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,

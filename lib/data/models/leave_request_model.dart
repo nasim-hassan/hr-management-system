@@ -38,8 +38,8 @@ class LeaveRequest {
 
   factory LeaveRequest.fromJson(Map<String, dynamic> json) {
     return LeaveRequest(
-      id: json['id'] ?? '',
-      employeeId: json['employee_id'] ?? '',
+      id: json['id']?.toString() ?? '',
+      employeeId: json['employee_id']?.toString() ?? '',
       leaveType:
           LeaveType.fromString(json['leave_type'] ?? LeaveType.casual.toStringValue()),
       startDate: json['start_date'] != null

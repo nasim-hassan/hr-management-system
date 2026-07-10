@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hr_management_system/data/models/employee_model.dart';
 import 'package:hr_management_system/data/services/employee_service.dart';
+import 'package:hr_management_system/data/services/user_profile_service.dart';
+
 
 class EmployeeListState {
   final List<Employee> employees;
@@ -47,7 +49,16 @@ class EmployeeListNotifier extends StateNotifier<EmployeeListState> {
   Future<bool> addEmployee(Employee employee) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      final newEmployee = await EmployeeService.createEmployee(employee);
+      // 1. Resolve correct user_id by querying users table by email
+      final user = await UserProfileService.fetchUserProfileByEmail(employee.email);
+      if (user == null) {
+        throw Exception('No user profile found for email ${employee.email}. Please create the user account first.');
+      }
+
+      // 2. Associate the retrieved user_id with the new employee record
+      final employeeWithUserId = employee.copyWith(userId: user.id);
+
+      final newEmployee = await EmployeeService.createEmployee(employeeWithUserId);
       if (newEmployee != null) {
         state = state.copyWith(
           employees: [newEmployee, ...state.employees],
@@ -82,7 +93,9 @@ class EmployeeListNotifier extends StateNotifier<EmployeeListState> {
         'designation': employee.designation.toStringValue(),
         'department': employee.department,
         'manager': employee.manager,
-        'salary': employee.salary,
+        'base_salary': employee.baseSalary,
+        'allowances': employee.allowances,
+        'deductions': employee.deductions,
         'bank_name': employee.bankName,
         'account_number': employee.accountNumber,
         'ifsc_code': employee.ifscCode,

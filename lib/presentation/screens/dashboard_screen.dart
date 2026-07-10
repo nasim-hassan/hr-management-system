@@ -1,15 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:hr_management_system/config/app_routes.dart';
-import 'package:hr_management_system/data/models/mock_data.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hr_management_system/data/providers/attendance_provider.dart';
+import 'package:hr_management_system/data/providers/employee_provider.dart';
+import 'package:hr_management_system/data/providers/leave_request_provider.dart';
+import 'package:hr_management_system/data/providers/payroll_provider.dart';
+import 'package:hr_management_system/data/models/employee_model.dart';
+import 'package:hr_management_system/core/enums/app_enums.dart';
 
 /// Admin Dashboard Screen - Professional with Analytics
-class AdminDashboardScreen extends StatelessWidget {
+class AdminDashboardScreen extends ConsumerWidget {
   const AdminDashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final stats = MockDataProvider.getMockStatistics();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final employeeState = ref.watch(employeeProvider);
+    final attendanceState = ref.watch(attendanceProvider);
+    final leaveRequestState = ref.watch(leaveRequestProvider);
+    final payrollState = ref.watch(payrollProvider);
+
+    final today = DateTime.now();
+    final totalEmployees = employeeState.employees.length;
+    final attendanceToday = attendanceState.attendanceList.where((attendance) {
+      final date = attendance.date;
+      return date.year == today.year && date.month == today.month && date.day == today.day;
+    }).length;
+    final pendingLeaveRequests = leaveRequestState.leaveRequests
+        .where((leave) => leave.status == LeaveStatus.pending)
+        .length;
+    final pendingPayrolls = payrollState.payrolls.where((payroll) => !payroll.isPaid).length;
 
     return Scaffold(
       body: SingleChildScrollView(
@@ -59,25 +79,25 @@ class AdminDashboardScreen extends StatelessWidget {
                 children: [
                   _SmallStatCard(
                     title: 'Total Employees',
-                    value: stats['totalEmployees'].toString(),
+                    value: totalEmployees.toString(),
                     icon: Icons.people,
                     color: Colors.blue,
                   ),
                   _SmallStatCard(
                     title: 'Attendance Today',
-                    value: stats['attendanceToday'].toString(),
+                    value: attendanceToday.toString(),
                     icon: Icons.check_circle,
                     color: Colors.green,
                   ),
                   _SmallStatCard(
                     title: 'Pending Leaves',
-                    value: stats['pendingLeaveRequests'].toString(),
+                    value: pendingLeaveRequests.toString(),
                     icon: Icons.calendar_month,
                     color: Colors.orange,
                   ),
                   _SmallStatCard(
                     title: 'Pending Payrolls',
-                    value: stats['pendingPayrolls'].toString(),
+                    value: pendingPayrolls.toString(),
                     icon: Icons.payments,
                     color: Colors.purple,
                   ),
@@ -295,11 +315,14 @@ class AdminDashboardScreen extends StatelessWidget {
 }
 
 /// Manager Dashboard Screen
-class ManagerDashboardScreen extends StatelessWidget {
+class ManagerDashboardScreen extends ConsumerWidget {
   const ManagerDashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final employeeState = ref.watch(employeeProvider);
+    final employees = employeeState.employees;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Manager Dashboard'),
@@ -380,23 +403,20 @@ class ManagerDashboardScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  ...MockDataProvider.mockEmployees
-                      .map(
-                        (emp) => Card(
-                          child: ListTile(
-                            leading: const CircleAvatar(
-                              child: Icon(Icons.person),
-                            ),
-                            title: Text(emp.fullName),
-                            subtitle: Text(emp.designation.displayName),
-                            trailing: const Chip(
-                              label: Text('Present'),
-                              backgroundColor: Colors.green,
-                              labelStyle: TextStyle(color: Colors.white),
-                            ),
+                  ...employees.map((emp) => Card(
+                        child: ListTile(
+                          leading: const CircleAvatar(
+                            child: Icon(Icons.person),
+                          ),
+                          title: Text(emp.fullName),
+                          subtitle: Text(emp.designation.displayName),
+                          trailing: const Chip(
+                            label: Text('Present'),
+                            backgroundColor: Colors.green,
+                            labelStyle: TextStyle(color: Colors.white),
                           ),
                         ),
-                      ),
+                      )),
                 ],
               ),
             ),
@@ -410,14 +430,32 @@ class ManagerDashboardScreen extends StatelessWidget {
 }
 
 /// Employee Dashboard Screen
-class EmployeeDashboardScreen extends StatelessWidget {
+class EmployeeDashboardScreen extends ConsumerWidget {
   const EmployeeDashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final employee = MockDataProvider.mockEmployees.first;
-    final recentAttendance =
-        MockDataProvider.getMockAttendanceByEmployee(employee.id);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final employeeState = ref.watch(employeeProvider);
+    final attendanceState = ref.watch(attendanceProvider);
+    final Employee employee = employeeState.employees.isNotEmpty
+        ? employeeState.employees.first
+        : Employee(
+            id: 'unknown',
+            userId: '',
+            firstName: 'Unknown',
+            lastName: 'User',
+            email: '',
+            phoneNumber: '',
+            dateOfBirth: DateTime.now(),
+            dateOfJoining: DateTime.now(),
+            designation: Designation.intern,
+            department: '',
+            isActive: true,
+            createdAt: DateTime.now(),
+          );
+    final recentAttendance = attendanceState.attendanceList
+        .where((attendance) => attendance.employeeId == employee.id)
+        .toList();
 
     return Scaffold(
       appBar: AppBar(

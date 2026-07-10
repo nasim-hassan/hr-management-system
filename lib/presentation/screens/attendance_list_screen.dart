@@ -154,8 +154,7 @@ class _AttendanceListScreenState extends ConsumerState<AttendanceListScreen> {
             ),
           );
           if (result != null && result is Attendance) {
-            await AttendanceService.createAttendance(result);
-            ref.invalidate(attendanceProvider);
+            await ref.read(attendanceProvider.notifier).addAttendance(result);
           }
         },
         backgroundColor: AppTheme.primaryColor,
@@ -183,19 +182,7 @@ class _AttendanceListScreenState extends ConsumerState<AttendanceListScreen> {
             ),
           );
           if (result != null && result is Attendance) {
-            await AttendanceService.updateAttendance(result.id, {
-              'employee_id': result.employeeId,
-              'date': result.date.toIso8601String(),
-              'check_in_time': result.checkInTime?.toIso8601String(),
-              'check_out_time': result.checkOutTime?.toIso8601String(),
-              'status': result.status.toStringValue(),
-              'notes': result.notes,
-              'location': result.location,
-              'latitude': result.latitude,
-              'longitude': result.longitude,
-              'updated_at': DateTime.now().toIso8601String(),
-            });
-            ref.invalidate(attendanceProvider);
+            await ref.read(attendanceProvider.notifier).updateAttendance(result);
           }
         },
         child: Padding(

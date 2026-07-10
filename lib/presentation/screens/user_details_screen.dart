@@ -184,11 +184,11 @@ class _UserDetailsScreenState extends ConsumerState<UserDetailsScreen> {
               ),
               PopupMenuItem(
                 onTap: _deleteUser,
-                child: Row(
+                child: const Row(
                   children: [
-                    const Icon(Icons.delete, size: 18, color: Colors.red),
-                    const SizedBox(width: 8),
-                    const Text('Delete', style: TextStyle(color: Colors.red)),
+                    Icon(Icons.delete, size: 18, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('Delete', style: TextStyle(color: Colors.red)),
                   ],
                 ),
               ),

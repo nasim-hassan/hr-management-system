@@ -159,7 +159,7 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
                         borderSide: BorderSide(color: Colors.grey.shade300),
                       ),
                     ),
-                    value: _selectedType,
+                    initialValue: _selectedType,
                     items: ReportType.values.map((type) {
                       return DropdownMenuItem(
                         value: type,
@@ -171,6 +171,7 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
                         if (val != null) _selectedType = val;
                       });
                     },
+                    validator: (val) => val == null ? 'Please select a report type' : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
@@ -233,7 +234,7 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
                         borderSide: BorderSide(color: Colors.grey.shade300),
                       ),
                     ),
-                    value: _selectedStatus,
+                    initialValue: _selectedStatus,
                     items: ReportStatus.values.map((status) {
                       return DropdownMenuItem(
                         value: status,
@@ -245,6 +246,7 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
                         if (val != null) _selectedStatus = val;
                       });
                     },
+                    validator: (val) => val == null ? 'Please select a report status' : null,
                   ),
                 ],
               ),
