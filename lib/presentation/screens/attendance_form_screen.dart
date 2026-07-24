@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hr_management_system/core/theme/app_theme.dart';
 import 'package:hr_management_system/data/models/attendance_model.dart';
+import 'package:hr_management_system/data/providers/attendance_provider.dart';
 import 'package:hr_management_system/data/providers/employee_provider.dart';
 import 'package:hr_management_system/core/enums/app_enums.dart';
 
@@ -49,16 +50,45 @@ class _AttendanceFormScreenState extends ConsumerState<AttendanceFormScreen> {
   }
 
   void _saveAttendance() {
+    final attendanceState = ref.read(attendanceProvider);
+
     if (_formKey.currentState!.validate() && _selectedEmployeeId != null) {
-      DateTime? finalCheckIn;
-      DateTime? finalCheckOut;
-      
-      if (_checkInTime != null) {
-        finalCheckIn = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day, _checkInTime!.hour, _checkInTime!.minute);
+      final sameDateAlreadyExists = attendanceState.attendanceList.any((record) {
+        final equalDate = record.date.year == _selectedDate.year &&
+            record.date.month == _selectedDate.month &&
+            record.date.day == _selectedDate.day;
+        return record.employeeId == _selectedEmployeeId && equalDate && record.id != widget.attendance?.id;
+      });
+
+      if (sameDateAlreadyExists) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Attendance already exists for this employee on the selected date.'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
       }
-      if (_checkOutTime != null) {
-        finalCheckOut = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day, _checkOutTime!.hour, _checkOutTime!.minute);
-      }
+
+      final checkInTime = _checkInTime ?? const TimeOfDay(hour: 9, minute: 0);
+      final checkOutTime = _checkOutTime ?? const TimeOfDay(hour: 18, minute: 0);
+
+      final finalCheckIn = DateTime(
+        _selectedDate.year,
+        _selectedDate.month,
+        _selectedDate.day,
+        checkInTime.hour,
+        checkInTime.minute,
+      );
+
+      final finalCheckOut = DateTime(
+        _selectedDate.year,
+        _selectedDate.month,
+        _selectedDate.day,
+        checkOutTime.hour,
+        checkOutTime.minute,
+      );
 
       final newAttendance = Attendance(
         id: widget.attendance?.id ?? 'att_${DateTime.now().millisecondsSinceEpoch}',

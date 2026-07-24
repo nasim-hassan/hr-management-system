@@ -1,5 +1,7 @@
 import 'package:hr_management_system/config/supabase_config.dart';
+import 'package:hr_management_system/core/enums/app_enums.dart';
 import 'package:hr_management_system/data/models/payroll_model.dart';
+
 
 class PayrollService {
   static const String _tableName = 'payroll';
@@ -48,6 +50,9 @@ class PayrollService {
           .single();
 
       if (response == null) return null;
+
+
+
       return Payroll.fromJson(response as Map<String, dynamic>);
     } catch (e) {
       throw Exception('Failed to create payroll record: $e');

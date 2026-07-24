@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hr_management_system/config/app_routes.dart';
 import 'package:hr_management_system/core/theme/app_theme.dart';
+import 'package:hr_management_system/core/enums/app_enums.dart';
 import 'package:hr_management_system/data/models/employee_model.dart';
 import 'package:hr_management_system/data/providers/employee_provider.dart';
 
@@ -17,10 +18,11 @@ class _EmployeeListScreenState extends ConsumerState<EmployeeListScreen> {
 
   List<Employee> _getFilteredEmployees(List<Employee> employees) {
     if (_searchQuery.isEmpty) return employees;
+    final query = _searchQuery.toLowerCase();
     return employees.where((emp) {
-      return emp.fullName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          emp.department.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          emp.designation.displayName.toLowerCase().contains(_searchQuery.toLowerCase());
+      return emp.fullName.toLowerCase().contains(query) ||
+          emp.email.toLowerCase().contains(query) ||
+          emp.phoneNumber.toLowerCase().contains(query);
     }).toList();
   }
 
@@ -173,41 +175,49 @@ class _EmployeeListScreenState extends ConsumerState<EmployeeListScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      employee.designation.displayName,
+                      employee.email,
                       style: const TextStyle(
                         fontSize: 14,
                         color: AppTheme.textSecondaryColor,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    if (employee.baseSalary != null)
-                      Text(
-                        'Salary: ₹${employee.netSalary.toStringAsFixed(0)}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppTheme.accentColor,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
                     const SizedBox(height: 8),
-                    Row(
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppTheme.accentColor.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            employee.department,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppTheme.accentColor,
-                              fontWeight: FontWeight.w600,
+                        if (employee.department != null && employee.department!.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppTheme.accentColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              employee.department!,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.accentColor,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
+                        if (employee.designation != null && employee.designation!.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppTheme.secondaryColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              Designation.fromString(employee.designation!).displayName,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.secondaryColor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
                         if (employee.isActive)
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

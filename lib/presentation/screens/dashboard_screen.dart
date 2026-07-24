@@ -6,8 +6,75 @@ import 'package:hr_management_system/data/providers/attendance_provider.dart';
 import 'package:hr_management_system/data/providers/employee_provider.dart';
 import 'package:hr_management_system/data/providers/leave_request_provider.dart';
 import 'package:hr_management_system/data/providers/payroll_provider.dart';
+import 'package:hr_management_system/data/models/attendance_model.dart';
 import 'package:hr_management_system/data/models/employee_model.dart';
 import 'package:hr_management_system/core/enums/app_enums.dart';
+
+List<FlSpot> buildAttendanceTrendSpots(List<Attendance> attendanceList, {int days = 7}) {
+  if (attendanceList.isEmpty || days <= 0) {
+    return const [];
+  }
+
+  final today = DateTime.now();
+  final startDate = DateTime(today.year, today.month, today.day).subtract(Duration(days: days - 1));
+  final points = <FlSpot>[];
+
+  for (int index = 0; index < days; index++) {
+    final date = startDate.add(Duration(days: index));
+    final dayRecords = attendanceList.where((attendance) {
+      final attendanceDate = DateTime(
+        attendance.date.year,
+        attendance.date.month,
+        attendance.date.day,
+      );
+      return attendanceDate.year == date.year &&
+          attendanceDate.month == date.month &&
+          attendanceDate.day == date.day;
+    }).toList();
+
+    final activeCount = dayRecords.where((attendance) {
+      return attendance.status == AttendanceStatus.present ||
+          attendance.status == AttendanceStatus.remote ||
+          attendance.status == AttendanceStatus.halfDay;
+    }).length;
+
+    points.add(FlSpot(index.toDouble(), activeCount.toDouble()));
+  }
+
+  return points;
+}
+
+Map<String, int> buildAttendanceDistributionData(List<Attendance> attendanceList) {
+  final distribution = <String, int>{
+    'Present': 0,
+    'Remote': 0,
+    'Half Day': 0,
+    'On Leave': 0,
+    'Absent': 0,
+  };
+
+  for (final attendance in attendanceList) {
+    switch (attendance.status) {
+      case AttendanceStatus.present:
+        distribution['Present'] = distribution['Present']! + 1;
+        break;
+      case AttendanceStatus.remote:
+        distribution['Remote'] = distribution['Remote']! + 1;
+        break;
+      case AttendanceStatus.halfDay:
+        distribution['Half Day'] = distribution['Half Day']! + 1;
+        break;
+      case AttendanceStatus.onLeave:
+        distribution['On Leave'] = distribution['On Leave']! + 1;
+        break;
+      case AttendanceStatus.absent:
+        distribution['Absent'] = distribution['Absent']! + 1;
+        break;
+    }
+  }
+
+  return distribution;
+}
 
 /// Admin Dashboard Screen - Professional with Analytics
 class AdminDashboardScreen extends ConsumerWidget {
@@ -30,6 +97,12 @@ class AdminDashboardScreen extends ConsumerWidget {
         .where((leave) => leave.status == LeaveStatus.pending)
         .length;
     final pendingPayrolls = payrollState.payrolls.where((payroll) => !payroll.isPaid).length;
+    final attendanceTrendSpots = buildAttendanceTrendSpots(attendanceState.attendanceList, days: 7);
+    final attendanceDistribution = buildAttendanceDistributionData(attendanceState.attendanceList);
+    final distributionEntries = attendanceDistribution.entries
+        .where((entry) => entry.value > 0)
+        .toList();
+    final hasAttendanceData = attendanceState.attendanceList.isNotEmpty;
 
     return Scaffold(
       body: SingleChildScrollView(
@@ -144,53 +217,66 @@ class AdminDashboardScreen extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      SizedBox(
-                        height: 180,
-                        child: LineChart(
-                          LineChartData(
-                            gridData: const FlGridData(show: true),
-                            titlesData: FlTitlesData(
-                              rightTitles: const AxisTitles(
-                                sideTitles: SideTitles(showTitles: false),
-                              ),
-                              topTitles: const AxisTitles(
-                                sideTitles: SideTitles(showTitles: false),
-                              ),
-                              bottomTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  getTitlesWidget: (value, meta) {
-                                    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-                                    return Text(
-                                      days[value.toInt() % 7],
-                                      style: const TextStyle(fontSize: 12),
-                                    );
-                                  },
-                                  reservedSize: 30,
+                      if (attendanceState.isLoading)
+                        const SizedBox(
+                          height: 180,
+                          child: Center(child: CircularProgressIndicator()),
+                        )
+                      else if (!hasAttendanceData)
+                        const SizedBox(
+                          height: 180,
+                          child: Center(child: Text('No attendance data available yet.')),
+                        )
+                      else
+                        SizedBox(
+                          height: 180,
+                          child: LineChart(
+                            LineChartData(
+                              gridData: const FlGridData(show: true),
+                              titlesData: FlTitlesData(
+                                rightTitles: const AxisTitles(
+                                  sideTitles: SideTitles(showTitles: false),
+                                ),
+                                topTitles: const AxisTitles(
+                                  sideTitles: SideTitles(showTitles: false),
+                                ),
+                                bottomTitles: AxisTitles(
+                                  sideTitles: SideTitles(
+                                    showTitles: true,
+                                    getTitlesWidget: (value, meta) {
+                                      final index = value.toInt();
+                                      if (index < 0 || index >= attendanceTrendSpots.length) {
+                                        return const SizedBox.shrink();
+                                      }
+                                      final date = DateTime.now().subtract(
+                                        Duration(days: attendanceTrendSpots.length - 1 - index),
+                                      );
+                                      return Text(
+                                        '${date.day}',
+                                        style: const TextStyle(fontSize: 12),
+                                      );
+                                    },
+                                    reservedSize: 30,
+                                  ),
                                 ),
                               ),
+                              borderData: FlBorderData(show: false),
+                              lineBarsData: [
+                                LineChartBarData(
+                                  spots: attendanceTrendSpots,
+                                  isCurved: true,
+                                  color: Colors.blue,
+                                  barWidth: 3,
+                                  dotData: const FlDotData(show: true),
+                                  belowBarData: BarAreaData(
+                                    show: true,
+                                    color: Colors.blue.withOpacity(0.15),
+                                  ),
+                                ),
+                              ],
                             ),
-                            borderData: FlBorderData(show: false),
-                            lineBarsData: [
-                              LineChartBarData(
-                                spots: const [
-                                  FlSpot(0, 8),
-                                  FlSpot(1, 7),
-                                  FlSpot(2, 9),
-                                  FlSpot(3, 6),
-                                  FlSpot(4, 8),
-                                  FlSpot(5, 5),
-                                  FlSpot(6, 7),
-                                ],
-                                isCurved: true,
-                                color: Colors.blue,
-                                barWidth: 3,
-                                dotData: const FlDotData(show: true),
-                              ),
-                            ],
                           ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -215,50 +301,65 @@ class AdminDashboardScreen extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      SizedBox(
-                        height: 200,
-                        child: PieChart(
-                          PieChartData(
-                            sections: [
-                              PieChartSectionData(
-                                value: 60,
-                                color: Colors.green,
-                                title: 'Present\n(60%)',
-                                radius: 50,
-                                titleStyle: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
+                      if (!hasAttendanceData)
+                        const SizedBox(
+                          height: 200,
+                          child: Center(child: Text('No attendance distribution available yet.')),
+                        )
+                      else
+                        Column(
+                          children: [
+                            SizedBox(
+                              height: 200,
+                              child: PieChart(
+                                PieChartData(
+                                  sections: distributionEntries.map((entry) {
+                                    final total = distributionEntries.fold<double>(0, (sum, item) => sum + item.value.toDouble());
+                                    final value = total > 0 ? entry.value.toDouble() : 0.0;
+                                    final percentage = total > 0 ? (entry.value / total * 100).round() : 0;
+                                    final color = _chartColorFor(entry.key);
+                                    return PieChartSectionData(
+                                      value: value,
+                                      color: color,
+                                      title: '${entry.key}\n($percentage%)',
+                                      radius: 50,
+                                      titleStyle: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    );
+                                  }).toList(),
+                                  sectionsSpace: 2,
+                                  centerSpaceRadius: 40,
                                 ),
                               ),
-                              PieChartSectionData(
-                                value: 25,
-                                color: Colors.orange,
-                                title: 'On Leave\n(25%)',
-                                radius: 50,
-                                titleStyle: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              PieChartSectionData(
-                                value: 15,
-                                color: Colors.red,
-                                title: 'Absent\n(15%)',
-                                radius: 50,
-                                titleStyle: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                            sectionsSpace: 2,
-                            centerSpaceRadius: 40,
-                          ),
+                            ),
+                            const SizedBox(height: 12),
+                            Wrap(
+                              spacing: 12,
+                              runSpacing: 8,
+                              children: distributionEntries.map((entry) {
+                                final color = _chartColorFor(entry.key);
+                                return Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 12,
+                                      height: 12,
+                                      decoration: BoxDecoration(
+                                        color: color,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text('${entry.key}: ${entry.value}'),
+                                  ],
+                                );
+                              }).toList(),
+                            ),
+                          ],
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -409,7 +510,7 @@ class ManagerDashboardScreen extends ConsumerWidget {
                             child: Icon(Icons.person),
                           ),
                           title: Text(emp.fullName),
-                          subtitle: Text(emp.designation.displayName),
+                          subtitle: Text(emp.email),
                           trailing: const Chip(
                             label: Text('Present'),
                             backgroundColor: Colors.green,
@@ -446,10 +547,6 @@ class EmployeeDashboardScreen extends ConsumerWidget {
             lastName: 'User',
             email: '',
             phoneNumber: '',
-            dateOfBirth: DateTime.now(),
-            dateOfJoining: DateTime.now(),
-            designation: Designation.intern,
-            department: '',
             isActive: true,
             createdAt: DateTime.now(),
           );
@@ -486,7 +583,7 @@ class EmployeeDashboardScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    employee.designation.displayName,
+                    employee.email,
                     style: const TextStyle(
                       fontSize: 14,
                       color: Colors.grey,
@@ -508,9 +605,9 @@ class EmployeeDashboardScreen extends ConsumerWidget {
                 childAspectRatio: 2.2,
                 children: [
                   _SmallStatCard(
-                    title: 'Department',
-                    value: employee.department,
-                    icon: Icons.domain,
+                    title: 'Phone',
+                    value: employee.phoneNumber,
+                    icon: Icons.phone,
                     color: Colors.blue,
                   ),
                   _SmallStatCard(
@@ -572,6 +669,23 @@ class EmployeeDashboardScreen extends ConsumerWidget {
 // ============ Helper Widgets ============
 
 /// Small Stat Card Widget - Grid Layout with Icon Alongside
+Color _chartColorFor(String label) {
+  switch (label) {
+    case 'Present':
+      return Colors.green;
+    case 'Remote':
+      return Colors.blue;
+    case 'Half Day':
+      return Colors.orange;
+    case 'On Leave':
+      return Colors.purple;
+    case 'Absent':
+      return Colors.red;
+    default:
+      return Colors.grey;
+  }
+}
+
 class _SmallStatCard extends StatelessWidget {
   final String title;
   final String value;

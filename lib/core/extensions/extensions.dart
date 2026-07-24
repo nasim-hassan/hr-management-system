@@ -122,7 +122,7 @@ extension IntExtension on int {
 enum DurationUnit { seconds, minutes, hours, days }
 
 extension DoubleExtension on double {
-  String toFormattedCurrency({String currency = '₹', int decimals = 2}) {
+  String toFormattedCurrency({String currency = '৳', int decimals = 2}) {
     return '$currency${toStringAsFixed(decimals).replaceAllMapped(
       RegExp(r'(\d)(?=(\d{3})+\.)'),
       (Match match) => '${match.group(1)},',

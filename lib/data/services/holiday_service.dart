@@ -1,5 +1,7 @@
 import 'package:hr_management_system/config/supabase_config.dart';
+import 'package:hr_management_system/core/enums/app_enums.dart';
 import 'package:hr_management_system/data/models/holiday_model.dart';
+
 
 class HolidayService {
   static const String _tableName = 'holidays';
@@ -39,7 +41,7 @@ class HolidayService {
   static Future<Holiday?> createHoliday(Holiday holiday) async {
     try {
       final data = holiday.toJson();
-      if (holiday.id.startsWith('holiday_')) data.remove('id');
+      data.remove('id');
 
       final response = await SupabaseConfig.client
           .from(_tableName)
@@ -48,6 +50,9 @@ class HolidayService {
           .single();
 
       if (response == null) return null;
+
+
+
       return Holiday.fromJson(response as Map<String, dynamic>);
     } catch (e) {
       throw Exception('Failed to create holiday: $e');

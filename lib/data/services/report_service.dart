@@ -1,5 +1,7 @@
 import 'package:hr_management_system/config/supabase_config.dart';
+import 'package:hr_management_system/core/enums/app_enums.dart';
 import 'package:hr_management_system/data/models/report_model.dart';
+
 
 class ReportService {
   static const String _tableName = 'reports';
@@ -48,6 +50,9 @@ class ReportService {
           .single();
 
       if (response == null) return null;
+
+
+
       return Report.fromJson(response as Map<String, dynamic>);
     } catch (e) {
       throw Exception('Failed to create report: $e');

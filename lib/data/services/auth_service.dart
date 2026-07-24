@@ -68,7 +68,7 @@ class AuthService {
       print('🔐 [AUTH] Attempting login with email: $email');
       
       print('🔐 [AUTH] Supabase URL: ${SupabaseConfig.client.supabaseUrl}');
-      print('🔐 [AUTH] Client initialized: ${SupabaseConfig.client != null}');
+      print('🔐 [AUTH] Client initialized');
       
       // Authenticate with Supabase Auth
       final response = await SupabaseConfig.client.auth.signInWithPassword(
@@ -136,14 +136,40 @@ class AuthService {
   static Future<String?> signUp({
     required String email,
     required String password,
+    required String fullName,
   }) async {
     try {
       final response = await SupabaseConfig.client.auth.signUp(
         email: email,
         password: password,
+        data: {
+          'full_name': fullName,
+        },
       );
 
-      return response.user?.id;
+      if (response.user?.id == null) {
+        throw AuthException('Sign up did not return an auth user ID.');
+      }
+
+      // Ensure the newly-created account is authenticated for the immediate
+      // profile insert step. Some Supabase setups require a session to satisfy
+      // the users table's RLS policy during insert.
+      if (SupabaseConfig.client.auth.currentSession == null) {
+        final signInResponse = await SupabaseConfig.client.auth.signInWithPassword(
+          email: email,
+          password: password,
+        );
+
+        if (signInResponse.session == null) {
+          throw AuthException(
+            'Sign up succeeded but the new user session could not be established for profile creation.',
+          );
+        }
+      }
+
+      return response.user!.id;
+    } on supabase.AuthException catch (e) {
+      throw AuthException(e.message);
     } catch (e) {
       throw AuthException('Sign up failed: ${e.toString()}');
     }

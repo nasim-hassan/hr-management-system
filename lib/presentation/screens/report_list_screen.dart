@@ -2,333 +2,383 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hr_management_system/core/enums/app_enums.dart';
 import 'package:hr_management_system/core/theme/app_theme.dart';
-import 'package:hr_management_system/data/models/report_model.dart';
-import 'package:hr_management_system/data/providers/report_provider.dart';
-import 'package:hr_management_system/presentation/screens/report_form_screen.dart';
+import 'package:hr_management_system/data/models/attendance_model.dart';
+import 'package:hr_management_system/data/models/employee_model.dart';
+import 'package:hr_management_system/data/models/leave_request_model.dart';
+import 'package:hr_management_system/data/models/payroll_model.dart';
+import 'package:hr_management_system/data/providers/attendance_provider.dart';
+import 'package:hr_management_system/data/providers/employee_provider.dart';
+import 'package:hr_management_system/data/providers/leave_request_provider.dart';
+import 'package:hr_management_system/data/providers/payroll_provider.dart';
 
-class ReportListScreen extends ConsumerStatefulWidget {
+Map<String, int> buildEmployeeAnalytics(List<Employee> employees) {
+  final departmentSet = <String>{};
+  var activeEmployees = 0;
+
+  for (final employee in employees) {
+    if (employee.department != null && employee.department!.trim().isNotEmpty) {
+      departmentSet.add(employee.department!.trim());
+    }
+    if (employee.isActive) {
+      activeEmployees++;
+    }
+  }
+
+  return {
+    'totalEmployees': employees.length,
+    'activeEmployees': activeEmployees,
+    'departmentCount': departmentSet.length,
+  };
+}
+
+Map<String, int> buildAttendanceSummary(List<Attendance> attendanceList) {
+  final summary = <String, int>{
+    'present': 0,
+    'remote': 0,
+    'halfDay': 0,
+    'onLeave': 0,
+    'absent': 0,
+  };
+
+  for (final attendance in attendanceList) {
+    switch (attendance.status) {
+      case AttendanceStatus.present:
+        summary['present'] = summary['present']! + 1;
+        break;
+      case AttendanceStatus.remote:
+        summary['remote'] = summary['remote']! + 1;
+        break;
+      case AttendanceStatus.halfDay:
+        summary['halfDay'] = summary['halfDay']! + 1;
+        break;
+      case AttendanceStatus.onLeave:
+        summary['onLeave'] = summary['onLeave']! + 1;
+        break;
+      case AttendanceStatus.absent:
+        summary['absent'] = summary['absent']! + 1;
+        break;
+    }
+  }
+
+  return summary;
+}
+
+Map<String, double> buildPayrollSummary(List<Payroll> payrollList) {
+  final totalPayrollValue = payrollList.fold<double>(0, (sum, payroll) => sum + payroll.netSalary);
+  final paidPayrollValue = payrollList
+      .where((payroll) => payroll.isPaid)
+      .fold<double>(0, (sum, payroll) => sum + payroll.netSalary);
+  final pendingPayrollValue = totalPayrollValue - paidPayrollValue;
+
+  return {
+    'totalPayrollValue': totalPayrollValue,
+    'paidPayrollValue': paidPayrollValue,
+    'pendingPayrollValue': pendingPayrollValue,
+  };
+}
+
+Map<String, int> buildLeaveSummary(List<LeaveRequest> leaveRequestList) {
+  final summary = <String, int>{
+    'pending': 0,
+    'approved': 0,
+    'rejected': 0,
+    'cancelled': 0,
+  };
+
+  for (final leave in leaveRequestList) {
+    switch (leave.status) {
+      case LeaveStatus.pending:
+        summary['pending'] = summary['pending']! + 1;
+        break;
+      case LeaveStatus.approved:
+        summary['approved'] = summary['approved']! + 1;
+        break;
+      case LeaveStatus.rejected:
+        summary['rejected'] = summary['rejected']! + 1;
+        break;
+      case LeaveStatus.cancelled:
+        summary['cancelled'] = summary['cancelled']! + 1;
+        break;
+    }
+  }
+
+  return summary;
+}
+
+class ReportListScreen extends ConsumerWidget {
   const ReportListScreen({super.key});
 
   @override
-  ConsumerState<ReportListScreen> createState() => _ReportListScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final employeeState = ref.watch(employeeProvider);
+    final attendanceState = ref.watch(attendanceProvider);
+    final leaveRequestState = ref.watch(leaveRequestProvider);
+    final payrollState = ref.watch(payrollProvider);
 
-class _ReportListScreenState extends ConsumerState<ReportListScreen> {
-  late List<Report> _reports;
-  String _searchQuery = '';
-  ReportType? _filterType;
+    final employeeAnalytics = buildEmployeeAnalytics(employeeState.employees);
+    final attendanceSummary = buildAttendanceSummary(attendanceState.attendanceList);
+    final leaveSummary = buildLeaveSummary(leaveRequestState.leaveRequests);
+    final payrollSummary = buildPayrollSummary(payrollState.payrolls);
 
-  List<Report> _filteredReports(List<Report> reports) {
-    return reports.where((report) {
-      final matchesSearch = _searchQuery.isEmpty ||
-          report.title.toLowerCase().contains(_searchQuery.toLowerCase());
-      final matchesType = _filterType == null || report.type == _filterType;
-      return matchesSearch && matchesType;
-    }).toList();
-  }
+    final totalEmployees = employeeAnalytics['totalEmployees'] ?? 0;
+    final activeEmployees = employeeAnalytics['activeEmployees'] ?? 0;
+    final departmentCount = employeeAnalytics['departmentCount'] ?? 0;
+    final totalAttendanceRecords = attendanceState.attendanceList.length;
+    final totalLeaveRequests = leaveRequestState.leaveRequests.length;
+    final totalPayrollValue = payrollSummary['totalPayrollValue'] ?? 0.0;
+    final paidPayrollValue = payrollSummary['paidPayrollValue'] ?? 0.0;
+    final pendingPayrollValue = payrollSummary['pendingPayrollValue'] ?? 0.0;
 
-  Future<void> _deleteReport(String id) async {
-    final success = await ref.read(reportProvider.notifier).deleteReport(id);
-    if (!success) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to delete report'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-      return;
-    }
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Report deleted'),
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
+    return Scaffold(
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Auto-generated HR Summary',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 1.7,
+              children: [
+                _SummaryStatCard(
+                  title: 'Total Employees',
+                  value: totalEmployees.toString(),
+                  icon: Icons.people,
+                  color: Colors.blue,
+                ),
+                _SummaryStatCard(
+                  title: 'Active Employees',
+                  value: activeEmployees.toString(),
+                  icon: Icons.verified_user,
+                  color: Colors.green,
+                ),
+                _SummaryStatCard(
+                  title: 'Attendance Records',
+                  value: totalAttendanceRecords.toString(),
+                  icon: Icons.fact_check,
+                  color: Colors.orange,
+                ),
+                _SummaryStatCard(
+                  title: 'Leave Requests',
+                  value: totalLeaveRequests.toString(),
+                  icon: Icons.calendar_month,
+                  color: Colors.purple,
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Workforce Analytics',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    _InfoRow('Departments', departmentCount.toString(), Colors.blue),
+                    _InfoRow('Present Today', (attendanceSummary['present'] ?? 0).toString(), Colors.green),
+                    _InfoRow('Remote Today', (attendanceSummary['remote'] ?? 0).toString(), Colors.indigo),
+                    _InfoRow('On Leave Today', (attendanceSummary['onLeave'] ?? 0).toString(), Colors.orange),
+                    _InfoRow('Absent Today', (attendanceSummary['absent'] ?? 0).toString(), Colors.red),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Attendance Breakdown',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    _ProgressRow('Present', attendanceSummary['present'] ?? 0, Colors.green),
+                    _ProgressRow('Remote', attendanceSummary['remote'] ?? 0, Colors.indigo),
+                    _ProgressRow('Half Day', attendanceSummary['halfDay'] ?? 0, Colors.orange),
+                    _ProgressRow('On Leave', attendanceSummary['onLeave'] ?? 0, Colors.purple),
+                    _ProgressRow('Absent', attendanceSummary['absent'] ?? 0, Colors.red),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Leave Status Summary',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    _InfoRow('Pending', (leaveSummary['pending'] ?? 0).toString(), Colors.orange),
+                    _InfoRow('Approved', (leaveSummary['approved'] ?? 0).toString(), Colors.green),
+                    _InfoRow('Rejected', (leaveSummary['rejected'] ?? 0).toString(), Colors.red),
+                    _InfoRow('Cancelled', (leaveSummary['cancelled'] ?? 0).toString(), Colors.grey),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Payroll Summary',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    _InfoRow('Total Payroll Value', '\৳${totalPayrollValue.toStringAsFixed(0)}', Colors.blue),
+                    _InfoRow('Paid Payroll', '\৳${paidPayrollValue.toStringAsFixed(0)}', Colors.green),
+                    _InfoRow('Pending Payroll', '\৳${pendingPayrollValue.toStringAsFixed(0)}', Colors.orange),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
       ),
     );
   }
+}
+
+class _SummaryStatCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  const _SummaryStatCard({
+    required this.title,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final canPop = Navigator.canPop(context);
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
-      appBar: canPop
-          ? AppBar(
-              title: const Text('Reports'),
-              elevation: 0,
-            )
-          : null,
-      body: Column(
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
         children: [
-          // Search and Filter Bar
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+              color: color.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Search reports...',
-                      prefixIcon: const Icon(Icons.search, color: AppTheme.primaryColor),
-                      filled: true,
-                      fillColor: AppTheme.backgroundColor,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                    ),
-                    onChanged: (value) {
-                      setState(() {
-                        _searchQuery = value;
-                      });
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: AppTheme.backgroundColor,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<ReportType?>(
-                      value: _filterType,
-                      hint: const Text('All Types'),
-                      icon: const Icon(Icons.filter_list, color: AppTheme.primaryColor),
-                      items: [
-                        const DropdownMenuItem(
-                          value: null,
-                          child: Text('All Types'),
-                        ),
-                        ...ReportType.values.map((type) {
-                          return DropdownMenuItem(
-                            value: type,
-                            child: Text(type.displayName),
-                          );
-                        }),
-                      ],
-                      onChanged: (value) {
-                        setState(() {
-                          _filterType = value;
-                        });
-                      },
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            child: Icon(icon, color: color, size: 24),
           ),
-
-          // Report List
+          const SizedBox(width: 12),
           Expanded(
-            child: ref.watch(reportProvider).isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _filteredReports(ref.watch(reportProvider).reports).length,
-                    itemBuilder: (context, index) {
-                      final report = _filteredReports(ref.watch(reportProvider).reports)[index];
-                return _buildReportCard(context, report);
-              },
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  value,
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  title,
+                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                ),
+              ],
             ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-          onPressed: () async {
-            final result = await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const ReportFormScreen(),
-              ),
-            );
-            if (result != null && result is Report) {
-              await ref.read(reportProvider.notifier).addReport(result);
-            }
-        },
-        backgroundColor: AppTheme.primaryColor,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('Generate Report', style: TextStyle(color: Colors.white)),
-      ),
     );
   }
+}
 
-  Widget _buildReportCard(BuildContext context, Report report) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-          onTap: () async {
-            final result = await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ReportFormScreen(report: report),
-              ),
-            );
-            if (result != null && result is Report) {
-              await ref.read(reportProvider.notifier).updateReport(result);
-            }
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+class _InfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _InfoRow(this.label, this.value, this.color);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  _getIconForReportType(report.type),
-                  color: AppTheme.primaryColor,
-                  size: 28,
-                ),
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      report.title,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.textPrimaryColor,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      report.description,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: AppTheme.textSecondaryColor,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        _buildStatusChip(report.status),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${report.createdAt.day}/${report.createdAt.month}/${report.createdAt.year}',
-                          style: const TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              Column(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('Delete Report'),
-                          content: const Text('Are you sure you want to delete this report?'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Cancel'),
-                            ),
-                            TextButton(
-                              onPressed: () {
-                                Navigator.pop(context);
-                                _deleteReport(report.id);
-                              },
-                              child: const Text('Delete', style: TextStyle(color: Colors.red)),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                  if (report.fileUrl != null)
-                    IconButton(
-                      icon: const Icon(Icons.download, color: AppTheme.primaryColor),
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Downloading report...')),
-                        );
-                      },
-                    ),
-                ],
-              ),
+              const SizedBox(width: 8),
+              Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
             ],
           ),
-        ),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+        ],
       ),
     );
   }
+}
 
-  IconData _getIconForReportType(ReportType type) {
-    switch (type) {
-      case ReportType.attendance:
-        return Icons.access_time;
-      case ReportType.payroll:
-        return Icons.payments;
-      case ReportType.employee:
-        return Icons.people;
-      case ReportType.performance:
-        return Icons.trending_up;
-      case ReportType.other:
-        return Icons.insert_drive_file;
-    }
-  }
+class _ProgressRow extends StatelessWidget {
+  final String label;
+  final int value;
+  final Color color;
 
-  Widget _buildStatusChip(ReportStatus status) {
-    Color color;
-    switch (status) {
-      case ReportStatus.generated:
-        color = Colors.green;
-        break;
-      case ReportStatus.pending:
-        color = Colors.orange;
-        break;
-      case ReportStatus.failed:
-        color = Colors.red;
-        break;
-    }
+  const _ProgressRow(this.label, this.value, this.color);
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Text(
-        status.displayName,
-        style: TextStyle(
-          fontSize: 12,
-          color: color,
-          fontWeight: FontWeight.w600,
-        ),
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+              Text(value.toString(), style: const TextStyle(fontWeight: FontWeight.bold)),
+            ],
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: value > 0 ? 1 : 0,
+              minHeight: 8,
+              color: color,
+              backgroundColor: color.withValues(alpha: 0.12),
+            ),
+          ),
+        ],
       ),
     );
   }

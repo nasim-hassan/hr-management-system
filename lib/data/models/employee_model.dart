@@ -1,68 +1,50 @@
-import 'package:hr_management_system/core/enums/app_enums.dart';
-
-/// Employee Model - Extended employee information
+/// Employee Model - Narrowed to identity, address, manager link, and bank details
 class Employee {
   final String id;
-  final String userId; // Reference to User
+  final String? userId; // Optional reference to User table
   final String firstName;
   final String lastName;
   final String email;
   final String phoneNumber;
   final String? address;
   final String? city;
-  final String? state;
   final String? zipCode;
   final String? country;
-  final DateTime dateOfBirth;
-  final String? gender;
-  final String? maritalStatus;
-  final DateTime dateOfJoining;
-  final Designation designation;
-  final String department;
+  final String? nidNumber;
   final String? manager; // Manager's user ID
+  final String? accountNumber;
+  final String? accountHolderName;
+  final String? bankName;
+  final String? branchName;
+  final String? department;
+  final String? designation;
   final double? baseSalary;
   final double? allowances;
-  final double? deductions;
-  final String? accountNumber;
-  final String? bankName;
-  final String? ifscCode;
-  final String? panNumber;
-  final String? aadharNumber;
-  final String? emergencyContact;
-  final String? emergencyContactNumber;
   final bool isActive;
   final DateTime createdAt;
   final DateTime? updatedAt;
 
   Employee({
     required this.id,
-    required this.userId,
+    this.userId,
     required this.firstName,
     required this.lastName,
     required this.email,
     required this.phoneNumber,
     this.address,
     this.city,
-    this.state,
     this.zipCode,
     this.country,
-    required this.dateOfBirth,
-    this.gender,
-    this.maritalStatus,
-    required this.dateOfJoining,
-    required this.designation,
-    required this.department,
+    this.nidNumber,
     this.manager,
+    this.accountNumber,
+    this.accountHolderName,
+    this.bankName,
+    this.branchName,
+    this.department,
+    this.designation,
     this.baseSalary,
     this.allowances,
-    this.deductions,
-    this.accountNumber,
-    this.bankName,
-    this.ifscCode,
-    this.panNumber,
-    this.aadharNumber,
-    this.emergencyContact,
-    this.emergencyContactNumber,
     required this.isActive,
     required this.createdAt,
     this.updatedAt,
@@ -70,79 +52,52 @@ class Employee {
 
   String get fullName => '$firstName $lastName ($id)';
 
-  double get netSalary =>
-      (baseSalary ?? 0.0) + (allowances ?? 0.0) - (deductions ?? 0.0);
-
   factory Employee.fromJson(Map<String, dynamic> json) {
-    // Helper to parse DATE or TIMESTAMP fields
-    DateTime parseDateTime(dynamic value, {bool isDate = false}) {
+    DateTime parseDateTime(dynamic value) {
       if (value == null) return DateTime.now();
       if (value is String) {
         try {
-          // Handle DATE format (YYYY-MM-DD)
           if (value.length == 10 && !value.contains('T')) {
             return DateTime.parse('${value}T00:00:00Z');
           }
-          // Handle TIMESTAMP format
           return DateTime.parse(value);
-        } catch (e) {
-          print('Failed to parse datetime: $value, error: $e');
+        } catch (_) {
           return DateTime.now();
         }
       }
       return DateTime.now();
     }
 
-    final rawSalary = json['salary']?.toString();
-    double? baseVal = json['base_salary'] != null
-        ? (json['base_salary'] as num).toDouble()
-        : null;
-    double? allowancesVal = json['allowances'] != null
-        ? (json['allowances'] as num).toDouble()
-        : null;
-    double? deductionsVal = json['deductions'] != null
-        ? (json['deductions'] as num).toDouble()
-        : null;
-
-    if (baseVal == null && rawSalary != null) {
-      baseVal = double.tryParse(rawSalary);
+    double? parseNullableDouble(dynamic value) {
+      if (value == null) return null;
+      if (value is num) return value.toDouble();
+      return double.tryParse(value.toString());
     }
 
     return Employee(
       id: json['id']?.toString() ?? '',
-      userId: json['user_id']?.toString() ?? '',
+      userId: json['user_id']?.toString(),
       firstName: json['first_name'] ?? '',
       lastName: json['last_name'] ?? '',
       email: json['email'] ?? '',
       phoneNumber: json['phone_number'] ?? '',
       address: json['address'],
       city: json['city'],
-      state: json['state'],
       zipCode: json['zip_code'],
       country: json['country'],
-      dateOfBirth: parseDateTime(json['date_of_birth'], isDate: true),
-      gender: json['gender'],
-      maritalStatus: json['marital_status'],
-      dateOfJoining: parseDateTime(json['date_of_joining']),
-      designation:
-          Designation.fromString(json['designation'] ?? 'intern'),
-      department: json['department'] ?? '',
+      nidNumber: json['nid_number'],
       manager: json['manager'],
-      baseSalary: baseVal,
-      allowances: allowancesVal,
-      deductions: deductionsVal,
       accountNumber: json['account_number'],
+      accountHolderName: json['account_holder_name'],
       bankName: json['bank_name'],
-      ifscCode: json['ifsc_code'],
-      panNumber: json['pan_number'],
-      aadharNumber: json['aadhar_number'],
-      emergencyContact: json['emergency_contact'],
-      emergencyContactNumber: json['emergency_contact_number'],
+      branchName: json['branch_name'],
+      department: json['department'],
+      designation: json['designation'],
+      baseSalary: parseNullableDouble(json['base_salary']),
+      allowances: parseNullableDouble(json['allowances']),
       isActive: json['is_active'] ?? true,
       createdAt: parseDateTime(json['created_at']),
-      updatedAt: json['updated_at'] != null
-          ? parseDateTime(json['updated_at'])
-          : null,
+      updatedAt: json['updated_at'] != null ? parseDateTime(json['updated_at']) : null,
     );
   }
 
@@ -156,26 +111,18 @@ class Employee {
       'phone_number': phoneNumber,
       'address': address,
       'city': city,
-      'state': state,
       'zip_code': zipCode,
       'country': country,
-      'date_of_birth': dateOfBirth.toIso8601String(),
-      'gender': gender,
-      'marital_status': maritalStatus,
-      'date_of_joining': dateOfJoining.toIso8601String(),
-      'designation': designation.toStringValue(),
-      'department': department,
+      'nid_number': nidNumber,
       'manager': manager,
+      'account_number': accountNumber,
+      'account_holder_name': accountHolderName,
+      'bank_name': bankName,
+      'branch_name': branchName,
+      'department': department,
+      'designation': designation,
       'base_salary': baseSalary,
       'allowances': allowances,
-      'deductions': deductions,
-      'account_number': accountNumber,
-      'bank_name': bankName,
-      'ifsc_code': ifscCode,
-      'pan_number': panNumber,
-      'aadhar_number': aadharNumber,
-      'emergency_contact': emergencyContact,
-      'emergency_contact_number': emergencyContactNumber,
       'is_active': isActive,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
@@ -191,26 +138,18 @@ class Employee {
     String? phoneNumber,
     String? address,
     String? city,
-    String? state,
     String? zipCode,
     String? country,
-    DateTime? dateOfBirth,
-    String? gender,
-    String? maritalStatus,
-    DateTime? dateOfJoining,
-    Designation? designation,
-    String? department,
+    String? nidNumber,
     String? manager,
+    String? accountNumber,
+    String? accountHolderName,
+    String? branchName,
+    String? bankName,
+    String? department,
+    String? designation,
     double? baseSalary,
     double? allowances,
-    double? deductions,
-    String? accountNumber,
-    String? bankName,
-    String? ifscCode,
-    String? panNumber,
-    String? aadharNumber,
-    String? emergencyContact,
-    String? emergencyContactNumber,
     bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -224,26 +163,18 @@ class Employee {
       phoneNumber: phoneNumber ?? this.phoneNumber,
       address: address ?? this.address,
       city: city ?? this.city,
-      state: state ?? this.state,
       zipCode: zipCode ?? this.zipCode,
       country: country ?? this.country,
-      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
-      gender: gender ?? this.gender,
-      maritalStatus: maritalStatus ?? this.maritalStatus,
-      dateOfJoining: dateOfJoining ?? this.dateOfJoining,
-      designation: designation ?? this.designation,
-      department: department ?? this.department,
+      nidNumber: nidNumber ?? this.nidNumber,
       manager: manager ?? this.manager,
+      accountNumber: accountNumber ?? this.accountNumber,
+      accountHolderName: accountHolderName ?? this.accountHolderName,
+      bankName: bankName ?? this.bankName,
+      branchName: branchName ?? this.branchName,
+      department: department ?? this.department,
+      designation: designation ?? this.designation,
       baseSalary: baseSalary ?? this.baseSalary,
       allowances: allowances ?? this.allowances,
-      deductions: deductions ?? this.deductions,
-      accountNumber: accountNumber ?? this.accountNumber,
-      bankName: bankName ?? this.bankName,
-      ifscCode: ifscCode ?? this.ifscCode,
-      panNumber: panNumber ?? this.panNumber,
-      aadharNumber: aadharNumber ?? this.aadharNumber,
-      emergencyContact: emergencyContact ?? this.emergencyContact,
-      emergencyContactNumber: emergencyContactNumber ?? this.emergencyContactNumber,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -262,6 +193,6 @@ class Employee {
 
   @override
   String toString() {
-    return 'Employee(id: $id, fullName: $fullName, designation: ${designation.displayName})';
+    return 'Employee(id: $id, fullName: $fullName)';
   }
 }

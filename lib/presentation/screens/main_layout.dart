@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hr_management_system/core/enums/app_enums.dart';
 import 'package:hr_management_system/core/theme/app_theme.dart';
-import 'package:hr_management_system/data/providers/notification_provider.dart';
 import 'package:hr_management_system/data/providers/auth_provider.dart';
+import 'package:hr_management_system/data/providers/notification_provider.dart';
 import 'package:hr_management_system/presentation/screens/dashboard_screen.dart';
 import 'package:hr_management_system/presentation/screens/employee_list_screen.dart';
 import 'package:hr_management_system/presentation/screens/attendance_list_screen.dart';
@@ -23,29 +24,63 @@ class MainLayout extends ConsumerStatefulWidget {
 class _MainLayoutState extends ConsumerState<MainLayout> {
   int _selectedIndex = 0;
 
-  final List<Widget> _screens = [
-    const AdminDashboardScreen(),
-    const EmployeeListScreen(),
-    const AttendanceListScreen(),
-    const LeaveRequestListScreen(),
-    const PayrollListScreen(),
-    const ReportListScreen(),
-    const UserListScreen(),
-    const HolidayListScreen(),
-  ];
+  List<Widget> get _screens {
+    final currentRole = ref.read(authProvider).user?.role;
+    if (currentRole == UserRole.manager) {
+      return [
+        const AdminDashboardScreen(),
+        const AttendanceListScreen(),
+        const LeaveRequestListScreen(),
+      ];
+    }
 
-  final List<_SidebarItem> _menuItems = [
-    _SidebarItem(icon: Icons.dashboard, label: 'Dashboard'),
-    _SidebarItem(icon: Icons.people, label: 'Employees'),
-    _SidebarItem(icon: Icons.access_time, label: 'Attendance'),
-    _SidebarItem(icon: Icons.event_note, label: 'Leave Requests'),
-    _SidebarItem(icon: Icons.payments, label: 'Payroll'),
-    _SidebarItem(icon: Icons.bar_chart, label: 'Reports'),
-    _SidebarItem(icon: Icons.supervised_user_circle, label: 'Users'),
-    _SidebarItem(icon: Icons.calendar_today, label: 'Holidays'),
-  ];
+    return [
+      const AdminDashboardScreen(),
+      const EmployeeListScreen(),
+      const AttendanceListScreen(),
+      const LeaveRequestListScreen(),
+      const PayrollListScreen(),
+      const ReportListScreen(),
+      const UserListScreen(),
+      const HolidayListScreen(),
+    ];
+  }
+
+  List<_SidebarItem> get _menuItems {
+    final currentRole = ref.read(authProvider).user?.role;
+    if (currentRole == UserRole.manager) {
+      return [
+        _SidebarItem(icon: Icons.dashboard, label: 'Dashboard'),
+        _SidebarItem(icon: Icons.access_time, label: 'Attendance'),
+        _SidebarItem(icon: Icons.event_note, label: 'Leave Requests'),
+      ];
+    }
+
+    return [
+      _SidebarItem(icon: Icons.dashboard, label: 'Dashboard'),
+      _SidebarItem(icon: Icons.people, label: 'Employees'),
+      _SidebarItem(icon: Icons.access_time, label: 'Attendance'),
+      _SidebarItem(icon: Icons.event_note, label: 'Leave Requests'),
+      _SidebarItem(icon: Icons.payments, label: 'Payroll'),
+      _SidebarItem(icon: Icons.bar_chart, label: 'Reports'),
+      _SidebarItem(icon: Icons.supervised_user_circle, label: 'Users'),
+      _SidebarItem(icon: Icons.calendar_today, label: 'Holidays'),
+    ];
+  }
 
   String _getAppBarTitle() {
+    final currentRole = ref.read(authProvider).user?.role;
+    final isManager = currentRole == UserRole.manager;
+
+    if (isManager) {
+      switch (_selectedIndex) {
+        case 0: return 'Dashboard';
+        case 1: return 'Attendance';
+        case 2: return 'Leave Requests';
+        default: return 'HR System';
+      }
+    }
+
     switch (_selectedIndex) {
       case 0: return 'Admin Dashboard';
       case 1: return 'Employees Directory';
@@ -59,12 +94,17 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
     }
   }
 
-  // Unread count is computed from notificationProvider at build time.
-
   @override
   Widget build(BuildContext context) {
     final isEmployeeScreen = _selectedIndex == 1;
-    final unreadCount = ref.watch(notificationProvider).notifications.where((n) => !n.isRead).length;
+    final currentRole = ref.watch(authProvider).user?.role;
+    final unreadCount = (currentRole == UserRole.hrAdmin || currentRole == UserRole.manager)
+        ? ref.watch(notificationProvider).notifications.where((n) => !n.isRead).length
+        : 0;
+
+    if (_selectedIndex >= _screens.length) {
+      _selectedIndex = 0;
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -88,50 +128,50 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
               icon: const Icon(Icons.filter_list),
               onPressed: () {},
             ),
-          // Notification Bell Icon with Badge
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.notifications_outlined),
-                tooltip: 'Notifications',
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const NotificationScreen(),
-                    ),
-                  );
-                },
-              ),
-              if (unreadCount > 0)
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: AppTheme.errorColor,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 1.5),
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 18,
-                      minHeight: 18,
-                    ),
-                    child: Text(
-                      unreadCount > 9 ? '9+' : '$unreadCount',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
+          if (currentRole == UserRole.hrAdmin || currentRole == UserRole.manager)
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.notifications_outlined),
+                  tooltip: 'Notifications',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const NotificationScreen(),
                       ),
-                      textAlign: TextAlign.center,
+                    );
+                  },
+                ),
+                if (unreadCount > 0)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.errorColor,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 1.5),
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 18,
+                        minHeight: 18,
+                      ),
+                      child: Text(
+                        unreadCount > 9 ? '9+' : '$unreadCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   ),
-                ),
-            ],
-          ),
+              ],
+            ),
           const SizedBox(width: 4),
         ],
       ),
@@ -144,6 +184,8 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
   }
 
   Widget _buildDrawer() {
+    final menuItems = _menuItems;
+
     return Drawer(
       backgroundColor: AppTheme.primaryColor,
       child: Column(
@@ -155,9 +197,9 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
           Expanded(
             child: ListView.builder(
               padding: EdgeInsets.zero,
-              itemCount: _menuItems.length,
+              itemCount: menuItems.length,
               itemBuilder: (context, index) {
-                final item = _menuItems[index];
+                final item = menuItems[index];
                 final isSelected = _selectedIndex == index;
                 return _buildSidebarMenuItem(item, isSelected, index);
               },
@@ -175,12 +217,20 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(18),
             ),
-            child: const Icon(Icons.business_center, color: Colors.white, size: 40),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: Image.asset(
+                'assets/images/app_icon.png',
+                width: 64,
+                height: 64,
+                fit: BoxFit.cover,
+              ),
+            ),
           ),
           const SizedBox(height: 16),
           const Text(

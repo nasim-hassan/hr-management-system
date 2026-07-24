@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hr_management_system/data/models/employee_model.dart';
 import 'package:hr_management_system/data/services/employee_service.dart';
-import 'package:hr_management_system/data/services/user_profile_service.dart';
 
 
 class EmployeeListState {
@@ -34,14 +33,11 @@ class EmployeeListNotifier extends StateNotifier<EmployeeListState> {
   }
 
   Future<void> loadEmployees() async {
-    print('🔄 [EMPLOYEE PROVIDER] Loading employees...');
     state = state.copyWith(isLoading: true, error: null);
     try {
       final employees = await EmployeeService.getAllEmployees();
-      print('✅ [EMPLOYEE PROVIDER] Loaded ${employees.length} employees');
       state = state.copyWith(employees: employees, isLoading: false);
     } catch (e) {
-      print('❌ [EMPLOYEE PROVIDER] Error loading employees: $e');
       state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
@@ -49,16 +45,7 @@ class EmployeeListNotifier extends StateNotifier<EmployeeListState> {
   Future<bool> addEmployee(Employee employee) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      // 1. Resolve correct user_id by querying users table by email
-      final user = await UserProfileService.fetchUserProfileByEmail(employee.email);
-      if (user == null) {
-        throw Exception('No user profile found for email ${employee.email}. Please create the user account first.');
-      }
-
-      // 2. Associate the retrieved user_id with the new employee record
-      final employeeWithUserId = employee.copyWith(userId: user.id);
-
-      final newEmployee = await EmployeeService.createEmployee(employeeWithUserId);
+      final newEmployee = await EmployeeService.createEmployee(employee);
       if (newEmployee != null) {
         state = state.copyWith(
           employees: [newEmployee, ...state.employees],
@@ -83,26 +70,19 @@ class EmployeeListNotifier extends StateNotifier<EmployeeListState> {
         'email': employee.email,
         'phone_number': employee.phoneNumber,
         'address': employee.address,
+        'department': employee.department,
+        'designation': employee.designation,
         'city': employee.city,
-        'state': employee.state,
         'zip_code': employee.zipCode,
         'country': employee.country,
-        'date_of_birth': employee.dateOfBirth.toIso8601String(),
-        'gender': employee.gender,
-        'marital_status': employee.maritalStatus,
-        'designation': employee.designation.toStringValue(),
-        'department': employee.department,
+        'nid_number': employee.nidNumber,
         'manager': employee.manager,
+        'account_number': employee.accountNumber,
+        'account_holder_name': employee.accountHolderName,
+        'bank_name': employee.bankName,
+        'branch_name': employee.branchName,
         'base_salary': employee.baseSalary,
         'allowances': employee.allowances,
-        'deductions': employee.deductions,
-        'bank_name': employee.bankName,
-        'account_number': employee.accountNumber,
-        'ifsc_code': employee.ifscCode,
-        'pan_number': employee.panNumber,
-        'aadhar_number': employee.aadharNumber,
-        'emergency_contact': employee.emergencyContact,
-        'emergency_contact_number': employee.emergencyContactNumber,
         'is_active': employee.isActive,
         'updated_at': DateTime.now().toIso8601String(),
       });

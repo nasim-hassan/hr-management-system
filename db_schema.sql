@@ -46,6 +46,7 @@ BEGIN
       'cancelled'
     );
   END IF;
+
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'notification_type') THEN
     CREATE TYPE notification_type AS ENUM (
       'leaveApproved',
@@ -56,6 +57,7 @@ BEGIN
       'announcement'
     );
   END IF;
+
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'report_type') THEN
     CREATE TYPE report_type AS ENUM (
       'attendance',
@@ -102,33 +104,27 @@ create table if not exists users (
 -- Employees table
 create table if not exists employees (
   id integer primary key generated always as identity (start with 1000000 increment by 1) check (id between 1000000 and 9999999),
-  user_id uuid not null unique references users(id),
+  user_id uuid unique references users(id),
   first_name text not null,
   last_name text not null,
   email text not null,
   phone_number text not null,
   address text,
   city text,
-  state text,
   zip_code text,
   country text,
-  date_of_birth date not null,
-  gender text,
-  marital_status text,
-  date_of_joining date not null,
-  designation designation_type not null default 'intern',
-  department text not null,
+  nid_number text,
   manager uuid references users(id),
+  account_number text,
+  account_holder_name text,
+  bank_name text,
+  branch_name text,
+  department text,
+  designation designation_type,
   base_salary numeric,
+  bonus numeric,
   allowances numeric,
   deductions numeric,
-  account_number text,
-  bank_name text,
-  ifsc_code text,
-  pan_number text,
-  aadhar_number text,
-  emergency_contact text,
-  emergency_contact_number text,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz
@@ -167,6 +163,29 @@ create table if not exists leave_requests (
   created_at timestamptz not null default now(),
   updated_at timestamptz
 );
+
+create or replace function prevent_overlapping_leave_requests()
+returns trigger as $$
+begin
+  if exists (
+    select 1
+    from public.leave_requests lr
+    where lr.employee_id = new.employee_id
+      and lr.id <> coalesce(old.id, new.id)
+      and not (new.start_date > lr.end_date or new.end_date < lr.start_date)
+  ) then
+    raise exception 'Leave request overlaps with an existing request for this employee.';
+  end if;
+
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists trg_prevent_leave_overlap on public.leave_requests;
+create trigger trg_prevent_leave_overlap
+before insert or update of employee_id, start_date, end_date on public.leave_requests
+for each row
+execute function prevent_overlapping_leave_requests();
 
 -- Payroll table
 create table if not exists payroll (
@@ -256,7 +275,7 @@ create index if not exists idx_employees_manager on employees(manager);
 create index if not exists idx_attendance_employee_date on attendance(employee_id, date);
 create index if not exists idx_leave_requests_employee on leave_requests(employee_id);
 create index if not exists idx_payroll_employee on payroll(employee_id);
-create index if not exists idx_notifications_user_id on notifications(user_id);
+
 create index if not exists idx_performance_reviews_employee on performance_reviews(employee_id);
 
 -- Enable RLS on all tables
@@ -266,6 +285,7 @@ alter table attendance enable row level security;
 alter table leave_requests enable row level security;
 alter table payroll enable row level security;
 alter table notifications enable row level security;
+
 alter table holidays enable row level security;
 alter table reports enable row level security;
 alter table performance_reviews enable row level security;
@@ -280,7 +300,8 @@ $$ language sql security definer;
 create policy users_select_policy on users
   for select using (
     auth.uid() = id
-    or get_current_user_role() in ('hrAdmin', 'manager')
+    or get_current_user_role() = 'hrAdmin'
+    or get_current_user_role() = 'manager'
   );
 
 create policy users_update_policy on users
@@ -292,6 +313,10 @@ create policy users_update_policy on users
 create policy users_insert_auth on users
   for insert with check (
     auth.uid() IS NOT NULL
+    and (
+      auth.uid() = id
+      or get_current_user_role() = 'hrAdmin'
+    )
   );
 
 create policy users_delete_policy on users
@@ -304,41 +329,25 @@ create policy employees_select on employees
   for select using (
     auth.uid() = user_id
     or manager = auth.uid()
-    or exists (
-      select 1 from users u
-      where u.id = auth.uid()
-        and u.role = 'hrAdmin'
-    )
+    or get_current_user_role() = 'hrAdmin'
+    or get_current_user_role() = 'manager'
   );
 
 create policy employees_insert_admin on employees
   for insert with check (
     user_id = auth.uid()
-    or exists (
-      select 1 from users u
-      where u.id = auth.uid()
-        and u.role = 'hrAdmin'
-    )
+    or get_current_user_role() = 'hrAdmin'
   );
 
 create policy employees_update_admin on employees
   for update using (
     auth.uid() = user_id
-    or manager = auth.uid()
-    or exists (
-      select 1 from users u
-      where u.id = auth.uid()
-        and u.role = 'hrAdmin'
-    )
+    or get_current_user_role() = 'hrAdmin'
   );
 
 create policy employees_delete_admin on employees
   for delete using (
-    exists (
-      select 1 from users u
-      where u.id = auth.uid()
-        and u.role = 'hrAdmin'
-    )
+    get_current_user_role() = 'hrAdmin'
   );
 
 create policy attendance_select on attendance
@@ -351,11 +360,8 @@ create policy attendance_select on attendance
           or e.manager = auth.uid()
         )
     )
-    or exists (
-      select 1 from users u
-      where u.id = auth.uid()
-        and u.role = 'hrAdmin'
-    )
+    or get_current_user_role() = 'hrAdmin'
+    or get_current_user_role() = 'manager'
   );
 
 create policy attendance_insert on attendance
@@ -363,31 +369,45 @@ create policy attendance_insert on attendance
     exists (
       select 1 from employees e
       where e.id = employee_id
-        and e.user_id = auth.uid()
+        and (
+          e.user_id = auth.uid()
+          or e.manager = auth.uid()
+        )
     )
-    or exists (
-      select 1 from users u
-      where u.id = auth.uid()
-        and u.role = 'hrAdmin'
-    )
+    or get_current_user_role() = 'hrAdmin'
+    or get_current_user_role() = 'manager'
   );
 
 create policy attendance_update_admin on attendance
-  for update using (
+  for update
+  using (
     exists (
-      select 1 from users u
-      where u.id = auth.uid()
-        and u.role = 'hrAdmin'
+      select 1 from employees e
+      where e.id = employee_id
+        and (
+          e.user_id = auth.uid()
+          or e.manager = auth.uid()
+        )
     )
+    or get_current_user_role() = 'hrAdmin'
+    or get_current_user_role() = 'manager'
+  )
+  with check (
+    exists (
+      select 1 from employees e
+      where e.id = employee_id
+        and (
+          e.user_id = auth.uid()
+          or e.manager = auth.uid()
+        )
+    )
+    or get_current_user_role() = 'hrAdmin'
+    or get_current_user_role() = 'manager'
   );
 
 create policy attendance_delete_admin on attendance
   for delete using (
-    exists (
-      select 1 from users u
-      where u.id = auth.uid()
-        and u.role = 'hrAdmin'
-    )
+    get_current_user_role() = 'hrAdmin'
   );
 
 create policy leave_requests_select on leave_requests
@@ -400,11 +420,8 @@ create policy leave_requests_select on leave_requests
           or e.manager = auth.uid()
         )
     )
-    or exists (
-      select 1 from users u
-      where u.id = auth.uid()
-        and u.role = 'hrAdmin'
-    )
+    or get_current_user_role() = 'hrAdmin'
+    or get_current_user_role() = 'manager'
   );
 
 create policy leave_requests_insert on leave_requests
@@ -412,13 +429,13 @@ create policy leave_requests_insert on leave_requests
     exists (
       select 1 from employees e
       where e.id = employee_id
-        and e.user_id = auth.uid()
+        and (
+          e.user_id = auth.uid()
+          or e.manager = auth.uid()
+        )
     )
-    or exists (
-      select 1 from users u
-      where u.id = auth.uid()
-        and u.role = 'hrAdmin'
-    )
+    or get_current_user_role() = 'hrAdmin'
+    or get_current_user_role() = 'manager'
   );
 
 create policy leave_requests_update_manager_or_admin on leave_requests
@@ -428,20 +445,13 @@ create policy leave_requests_update_manager_or_admin on leave_requests
       where e.id = employee_id
         and e.manager = auth.uid()
     )
-    or exists (
-      select 1 from users u
-      where u.id = auth.uid()
-        and u.role = 'hrAdmin'
-    )
+    or get_current_user_role() = 'hrAdmin'
+    or get_current_user_role() = 'manager'
   );
 
 create policy leave_requests_delete_admin on leave_requests
   for delete using (
-    exists (
-      select 1 from users u
-      where u.id = auth.uid()
-        and u.role = 'hrAdmin'
-    )
+    get_current_user_role() = 'hrAdmin'
   );
 
 create policy payroll_select on payroll
@@ -449,149 +459,93 @@ create policy payroll_select on payroll
     exists (
       select 1 from employees e
       where e.id = employee_id
-        and (
-          e.user_id = auth.uid()
-          or e.manager = auth.uid()
-        )
+        and e.user_id = auth.uid()
     )
-    or exists (
-      select 1 from users u
-      where u.id = auth.uid()
-        and u.role = 'hrAdmin'
-    )
+    or get_current_user_role() = 'hrAdmin'
+    or get_current_user_role() = 'manager'
   );
 
 create policy payroll_insert_admin on payroll
   for insert with check (
-    exists (
-      select 1 from users u
-      where u.id = auth.uid()
-        and u.role = 'hrAdmin'
-    )
+    get_current_user_role() = 'hrAdmin'
   );
 
 create policy payroll_update_admin on payroll
   for update using (
-    exists (
-      select 1 from users u
-      where u.id = auth.uid()
-        and u.role = 'hrAdmin'
-    )
+    get_current_user_role() = 'hrAdmin'
   );
 
 create policy payroll_delete_admin on payroll
   for delete using (
-    exists (
-      select 1 from users u
-      where u.id = auth.uid()
-        and u.role = 'hrAdmin'
-    )
+    get_current_user_role() = 'hrAdmin'
   );
 
 create policy notifications_select on notifications
   for select using (
     user_id = auth.uid()
-    or exists (
-      select 1 from users u
-      where u.id = auth.uid()
-        and u.role = 'hrAdmin'
-    )
+    or get_current_user_role() = 'hrAdmin'
+    or get_current_user_role() = 'manager'
   );
 
 create policy notifications_insert on notifications
   for insert with check (
     user_id = auth.uid()
-    or exists (
-      select 1 from users u
-      where u.id = auth.uid()
-        and u.role = 'hrAdmin'
-    )
+    or get_current_user_role() = 'hrAdmin'
+    or get_current_user_role() = 'manager'
   );
 
 create policy notifications_update_own on notifications
   for update using (
     user_id = auth.uid()
-    or exists (
-      select 1 from users u
-      where u.id = auth.uid()
-        and u.role = 'hrAdmin'
-    )
+    or get_current_user_role() = 'hrAdmin'
   );
 
 create policy notifications_delete_admin on notifications
   for delete using (
-    exists (
-      select 1 from users u
-      where u.id = auth.uid()
-        and u.role = 'hrAdmin'
-    )
+    get_current_user_role() = 'hrAdmin'
   );
+
+
 
 create policy holidays_select on holidays
   for select using (auth.role() = 'authenticated');
 
 create policy holidays_insert_admin on holidays
   for insert with check (
-    exists (
-      select 1 from users u
-      where u.id = auth.uid()
-        and u.role = 'hrAdmin'
-    )
+    get_current_user_role() = 'hrAdmin'
   );
 
 create policy holidays_update_admin on holidays
   for update using (
-    exists (
-      select 1 from users u
-      where u.id = auth.uid()
-        and u.role = 'hrAdmin'
-    )
+    get_current_user_role() = 'hrAdmin'
   );
 
 create policy holidays_delete_admin on holidays
   for delete using (
-    exists (
-      select 1 from users u
-      where u.id = auth.uid()
-        and u.role = 'hrAdmin'
-    )
+    get_current_user_role() = 'hrAdmin'
   );
 
 create policy reports_select on reports
   for select using (
     generated_by = auth.uid()
-    or exists (
-      select 1 from users u
-      where u.id = auth.uid()
-        and u.role in ('hrAdmin', 'manager')
-    )
+    or get_current_user_role() = 'hrAdmin'
+    or get_current_user_role() = 'manager'
   );
 
 create policy reports_insert_admin_or_manager on reports
   for insert with check (
-    exists (
-      select 1 from users u
-      where u.id = auth.uid()
-        and u.role in ('hrAdmin', 'manager')
-    )
+    get_current_user_role() = 'hrAdmin'
+    or get_current_user_role() = 'manager'
   );
 
 create policy reports_update_admin on reports
   for update using (
-    exists (
-      select 1 from users u
-      where u.id = auth.uid()
-        and u.role = 'hrAdmin'
-    )
+    get_current_user_role() = 'hrAdmin'
   );
 
 create policy reports_delete_admin on reports
   for delete using (
-    exists (
-      select 1 from users u
-      where u.id = auth.uid()
-        and u.role = 'hrAdmin'
-    )
+    get_current_user_role() = 'hrAdmin'
   );
 
 create policy performance_reviews_select on performance_reviews
@@ -602,38 +556,25 @@ create policy performance_reviews_select on performance_reviews
         and e.user_id = auth.uid()
     )
     or reviewed_by = auth.uid()
-    or exists (
-      select 1 from users u
-      where u.id = auth.uid()
-        and u.role in ('hrAdmin', 'manager')
-    )
+    or get_current_user_role() = 'hrAdmin'
+    or get_current_user_role() = 'manager'
   );
 
 create policy performance_reviews_insert_admin_or_manager on performance_reviews
   for insert with check (
-    exists (
-      select 1 from users u
-      where u.id = auth.uid()
-        and u.role in ('hrAdmin', 'manager')
-    )
+    get_current_user_role() = 'hrAdmin'
+    or get_current_user_role() = 'manager'
   );
 
 create policy performance_reviews_update_admin_or_manager on performance_reviews
   for update using (
-    exists (
-      select 1 from users u
-      where u.id = auth.uid()
-        and u.role in ('hrAdmin', 'manager')
-    )
+    get_current_user_role() = 'hrAdmin'
+    or get_current_user_role() = 'manager'
   );
 
 create policy performance_reviews_delete_admin on performance_reviews
   for delete using (
-    exists (
-      select 1 from users u
-      where u.id = auth.uid()
-        and u.role = 'hrAdmin'
-    )
+    get_current_user_role() = 'hrAdmin'
   );
 
 -- Grant schema permissions for Supabase user roles
@@ -647,6 +588,7 @@ grant select, insert, update, delete on public.attendance to postgres, service_r
 grant select, insert, update, delete on public.leave_requests to postgres, service_role, authenticated, anon;
 grant select, insert, update, delete on public.payroll to postgres, service_role, authenticated, anon;
 grant select, insert, update, delete on public.notifications to postgres, service_role, authenticated, anon;
+
 grant select, insert, update, delete on public.holidays to postgres, service_role, authenticated, anon;
 grant select, insert, update, delete on public.reports to postgres, service_role, authenticated, anon;
 grant select, insert, update, delete on public.performance_reviews to postgres, service_role, authenticated, anon;

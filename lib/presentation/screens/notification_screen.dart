@@ -17,6 +17,14 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
   NotificationType? _selectedTypeFilter;
   String _readFilter = 'all'; // 'all', 'unread', 'read'
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(notificationProvider.notifier).loadNotifications();
+    });
+  }
+
   List<app.Notification> _filteredNotifications(List<app.Notification> notifications) {
     final list = notifications.where((n) {
       // Search filter
@@ -247,7 +255,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                       const SizedBox(width: 16),
                       _buildTypeFilterChip('All Types', null),
                       const SizedBox(width: 8),
-                      ...NotificationType.values.map((type) => Padding(
+                      ...[NotificationType.leaveApproved].map((type) => Padding(
                             padding: const EdgeInsets.only(right: 8),
                             child: _buildTypeFilterChip(
                                 type.displayName, type),
@@ -298,16 +306,26 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
 
           // Notification List
           Expanded(
-            child: filtered.isEmpty
-                ? _buildEmptyState()
-                : ListView.builder(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    itemCount: filtered.length,
-                    itemBuilder: (context, index) {
-                      return _buildNotificationCard(filtered[index]);
-                    },
-                  ),
+            child: RefreshIndicator(
+              onRefresh: () => ref.read(notificationProvider.notifier).loadNotifications(),
+              child: filtered.isEmpty
+                  ? SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.6,
+                        child: _buildEmptyState(),
+                      ),
+                    )
+                  : ListView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      itemCount: filtered.length,
+                      itemBuilder: (context, index) {
+                        return _buildNotificationCard(filtered[index]);
+                      },
+                    ),
+            ),
           ),
         ],
       ),

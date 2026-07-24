@@ -4,6 +4,7 @@ import 'package:hr_management_system/core/theme/app_theme.dart';
 import 'package:hr_management_system/data/models/leave_request_model.dart';
 import 'package:hr_management_system/data/providers/leave_request_provider.dart';
 import 'package:hr_management_system/data/providers/employee_provider.dart';
+import 'package:hr_management_system/data/providers/notification_provider.dart';
 import 'package:hr_management_system/data/models/employee_model.dart';
 import 'package:hr_management_system/presentation/screens/leave_request_form_screen.dart';
 
@@ -120,6 +121,7 @@ class _LeaveRequestListScreenState extends ConsumerState<LeaveRequestListScreen>
             );
             if (result != null && result is LeaveRequest) {
               await ref.read(leaveRequestProvider.notifier).addLeaveRequest(result);
+              ref.read(notificationProvider.notifier).loadNotifications();
             }
         },
         backgroundColor: AppTheme.primaryColor,
@@ -155,6 +157,7 @@ class _LeaveRequestListScreenState extends ConsumerState<LeaveRequestListScreen>
             );
             if (result != null && result is LeaveRequest) {
               await ref.read(leaveRequestProvider.notifier).updateLeaveRequest(result);
+              ref.read(notificationProvider.notifier).loadNotifications();
             }
         },
         child: Padding(

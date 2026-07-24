@@ -18,7 +18,9 @@ class _UserListScreenState extends ConsumerState<UserListScreen> {
   UserRole? _selectedRole;
 
   List<User> get _filteredUsers {
-    var filtered = ref.watch(userProvider).users;
+    var filtered = ref.watch(userProvider).users
+        .where((user) => user.role != UserRole.employee)
+        .toList();
 
     // Filter by search query
     if (_searchQuery.isNotEmpty) {
@@ -260,15 +262,6 @@ class _UserListScreenState extends ConsumerState<UserListScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          await Navigator.pushNamed(context, AppRoutes.addUser);
-          setState(() {});
-        },
-        backgroundColor: AppTheme.primaryColor,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('Add User', style: TextStyle(color: Colors.white)),
-      ),
     );
   }
 
@@ -419,7 +412,9 @@ class _UserListScreenState extends ConsumerState<UserListScreen> {
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
-          ...UserRole.values.map((role) {
+          ...UserRole.values
+              .where((role) => role != UserRole.employee)
+              .map((role) {
             return CheckboxListTile(
               value: _selectedRole == role,
               onChanged: (value) {

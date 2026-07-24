@@ -16,6 +16,8 @@ class UserFormScreen extends ConsumerStatefulWidget {
 
 class _UserFormScreenState extends ConsumerState<UserFormScreen> {
   final _formKey = GlobalKey<FormState>();
+  List<UserRole> get _visibleRoles =>
+      UserRole.values.where((role) => role != UserRole.employee).toList();
 
   late TextEditingController _emailController;
   late TextEditingController _fullNameController;
@@ -23,7 +25,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
   late TextEditingController _passwordController;
   late TextEditingController _confirmPasswordController;
 
-  UserRole _selectedRole = UserRole.employee;
+  UserRole _selectedRole = UserRole.hrAdmin;
   bool _isActive = true;
   bool _showPassword = false;
   bool _showConfirmPassword = false;
@@ -39,8 +41,12 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
     _confirmPasswordController = TextEditingController();
 
     if (widget.user != null) {
-      _selectedRole = widget.user!.role;
+      _selectedRole = widget.user!.role == UserRole.employee
+          ? _visibleRoles.first
+          : widget.user!.role;
       _isActive = widget.user!.isActive;
+    } else {
+      _selectedRole = _visibleRoles.first;
     }
   }
 
@@ -270,7 +276,7 @@ class _UserFormScreenState extends ConsumerState<UserFormScreen> {
                   _buildDropdownField(
                     label: 'Role',
                     value: _selectedRole,
-                    items: UserRole.values,
+                    items: _visibleRoles,
                     onChanged: (role) {
                       setState(() => _selectedRole = role);
                     },

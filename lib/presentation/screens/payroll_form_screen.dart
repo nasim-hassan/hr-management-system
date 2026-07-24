@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hr_management_system/core/theme/app_theme.dart';
-import 'package:hr_management_system/data/models/payroll_model.dart';
-import 'package:hr_management_system/data/providers/employee_provider.dart';
+import 'package:hr_management_system/core/utils/payroll_calculation.dart';
 import 'package:hr_management_system/data/models/employee_model.dart';
+import 'package:hr_management_system/data/models/payroll_model.dart';
+import 'package:hr_management_system/data/providers/attendance_provider.dart';
+import 'package:hr_management_system/data/providers/employee_provider.dart';
+import 'package:hr_management_system/data/providers/holiday_provider.dart';
+import 'package:hr_management_system/data/providers/leave_request_provider.dart';
 
 class PayrollFormScreen extends ConsumerStatefulWidget {
   final Payroll? payroll;
@@ -36,7 +40,7 @@ class _PayrollFormScreenState extends ConsumerState<PayrollFormScreen> {
     super.initState();
     _baseSalaryController = TextEditingController(text: widget.payroll?.baseSalary.toString() ?? '');
     _bonusController = TextEditingController(text: widget.payroll?.bonus?.toString() ?? '');
-    _deductionsController = TextEditingController(text: widget.payroll?.deductions?.toString() ?? '');
+    _deductionsController = TextEditingController(text: '');
     _allowancesController = TextEditingController(text: widget.payroll?.allowances?.toString() ?? '');
     _notesController = TextEditingController(text: widget.payroll?.notes ?? '');
 
@@ -51,7 +55,6 @@ class _PayrollFormScreenState extends ConsumerState<PayrollFormScreen> {
 
     _baseSalaryController.addListener(_calculateNetSalary);
     _bonusController.addListener(_calculateNetSalary);
-    _deductionsController.addListener(_calculateNetSalary);
     _allowancesController.addListener(_calculateNetSalary);
   }
 
@@ -65,14 +68,52 @@ class _PayrollFormScreenState extends ConsumerState<PayrollFormScreen> {
     super.dispose();
   }
 
+  void _populateSalaryFieldsFromEmployee(Employee? employee) {
+    if (employee == null) return;
+
+    _baseSalaryController.text = employee.baseSalary?.toStringAsFixed(2) ?? '';
+    _allowancesController.text = employee.allowances?.toStringAsFixed(2) ?? '';
+    _bonusController.text = '';
+    _deductionsController.text = '';
+    _calculateNetSalary();
+  }
+
+  Employee? _getSelectedEmployee(List<Employee> employees) {
+    for (final employee in employees) {
+      if (employee.id == _selectedEmployeeId) return employee;
+    }
+    return null;
+  }
+
   void _calculateNetSalary() {
     final base = double.tryParse(_baseSalaryController.text) ?? 0.0;
     final bonus = double.tryParse(_bonusController.text) ?? 0.0;
     final allowances = double.tryParse(_allowancesController.text) ?? 0.0;
-    final deductions = double.tryParse(_deductionsController.text) ?? 0.0;
+
+    final attendanceState = ref.read(attendanceProvider);
+    final holidayState = ref.read(holidayProvider);
+    final leaveRequestState = ref.read(leaveRequestProvider);
+    final autoDeductions = calculateAttendanceDeduction(
+      baseSalary: base,
+      employeeId: _selectedEmployeeId ?? '',
+      month: _selectedMonth,
+      year: _selectedYear,
+      attendanceRecords: attendanceState.attendanceList,
+      holidays: [
+        ...holidayState.customHolidays,
+      ],
+      approvedLeaveRequests: leaveRequestState.leaveRequests,
+      weeklyHolidays: holidayState.weeklyHolidays,
+    );
 
     setState(() {
-      _netSalary = base + bonus + allowances - deductions;
+      _deductionsController.text = autoDeductions.toStringAsFixed(2);
+      _netSalary = calculatePayrollNetSalary(
+        baseSalary: base,
+        bonus: bonus,
+        allowances: allowances,
+        autoDeductions: autoDeductions,
+      );
     });
   }
 
@@ -85,7 +126,7 @@ class _PayrollFormScreenState extends ConsumerState<PayrollFormScreen> {
         year: _selectedYear,
         baseSalary: double.tryParse(_baseSalaryController.text) ?? 0.0,
         bonus: double.tryParse(_bonusController.text),
-        deductions: double.tryParse(_deductionsController.text),
+        deductions: double.tryParse(_deductionsController.text) ?? 0.0,
         allowances: double.tryParse(_allowancesController.text),
         netSalary: _netSalary,
         paymentDate: _paymentDate,
@@ -123,19 +164,42 @@ class _PayrollFormScreenState extends ConsumerState<PayrollFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(attendanceProvider, (_, __) {
+      if (mounted) {
+        _calculateNetSalary();
+      }
+    });
+    ref.listen(holidayProvider, (_, __) {
+      if (mounted) {
+        _calculateNetSalary();
+      }
+    });
+    ref.listen(leaveRequestProvider, (_, __) {
+      if (mounted) {
+        _calculateNetSalary();
+      }
+    });
+
     final isEdit = widget.payroll != null;
     final employeeState = ref.watch(employeeProvider);
     if (!isEdit && _selectedEmployeeId == null && !employeeState.isLoading && employeeState.employees.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
         setState(() {
           _selectedEmployeeId = employeeState.employees.first.id;
-          // auto-fill if needed
-          final emp = employeeState.employees.first;
-          if (emp.baseSalary != null) _baseSalaryController.text = emp.baseSalary!.round().toString();
-          if (emp.allowances != null) _allowancesController.text = emp.allowances!.round().toString();
-          if (emp.deductions != null) _deductionsController.text = emp.deductions!.round().toString();
         });
+        _populateSalaryFieldsFromEmployee(employeeState.employees.first);
       });
+    }
+
+    if (!isEdit && _selectedEmployeeId != null && !employeeState.isLoading) {
+      final selectedEmployee = _getSelectedEmployee(employeeState.employees);
+      if (selectedEmployee != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          _populateSalaryFieldsFromEmployee(selectedEmployee);
+        });
+      }
     }
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
@@ -183,18 +247,16 @@ class _PayrollFormScreenState extends ConsumerState<PayrollFormScreen> {
                     onChanged: isEdit
                         ? null
                         : (val) {
-                            setState(() {
-                              if (val != null) {
+                            if (val != null) {
+                              setState(() {
                                 _selectedEmployeeId = val;
-                                // Auto-fill breakdown if adding new
-                                if (!isEdit) {
-                                  final emp = employeeState.employees.firstWhere((e) => e.id == val);
-                                  _baseSalaryController.text = emp.baseSalary?.round().toString() ?? '';
-                                  _allowancesController.text = emp.allowances?.round().toString() ?? '0';
-                                  _deductionsController.text = emp.deductions?.round().toString() ?? '0';
-                                }
+                              });
+                              final selectedEmployee = _getSelectedEmployee(ref.read(employeeProvider).employees);
+                              if (selectedEmployee != null) {
+                                _populateSalaryFieldsFromEmployee(selectedEmployee);
                               }
-                            });
+                              _calculateNetSalary();
+                            }
                           },
                     validator: (val) => val == null ? 'Please select an employee' : null,
                   ),
@@ -223,6 +285,7 @@ class _PayrollFormScreenState extends ConsumerState<PayrollFormScreen> {
                             setState(() {
                               if (val != null) _selectedMonth = val;
                             });
+                            _calculateNetSalary();
                           },
                         ),
                       ),
@@ -250,6 +313,7 @@ class _PayrollFormScreenState extends ConsumerState<PayrollFormScreen> {
                             setState(() {
                               if (val != null) _selectedYear = val;
                             });
+                            _calculateNetSalary();
                           },
                         ),
                       ),
@@ -266,7 +330,7 @@ class _PayrollFormScreenState extends ConsumerState<PayrollFormScreen> {
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
                       labelText: 'Base Salary',
-                      prefixIcon: const Icon(Icons.currency_rupee, color: AppTheme.primaryColor),
+                      prefixIcon: const Icon(Icons.currency_exchange, color: AppTheme.primaryColor),
                       filled: true,
                       fillColor: Colors.grey.shade50,
                       border: OutlineInputBorder(
@@ -319,8 +383,9 @@ class _PayrollFormScreenState extends ConsumerState<PayrollFormScreen> {
                   TextFormField(
                     controller: _deductionsController,
                     keyboardType: TextInputType.number,
+                    readOnly: true,
                     decoration: InputDecoration(
-                      labelText: 'Deductions',
+                      labelText: 'Absent Deduction',
                       prefixIcon: const Icon(Icons.remove_circle_outline, color: Colors.red),
                       filled: true,
                       fillColor: Colors.grey.shade50,
@@ -349,7 +414,7 @@ class _PayrollFormScreenState extends ConsumerState<PayrollFormScreen> {
                           ),
                         ),
                         Text(
-                          '₹${_netSalary.toStringAsFixed(2)}',
+                          '৳${_netSalary.toStringAsFixed(2)}',
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,

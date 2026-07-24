@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hr_management_system/core/theme/app_theme.dart';
+import 'package:hr_management_system/core/utils/leave_request_validation.dart';
 import 'package:hr_management_system/data/models/leave_request_model.dart';
 import 'package:hr_management_system/data/providers/employee_provider.dart';
+import 'package:hr_management_system/data/providers/leave_request_provider.dart';
 import 'package:hr_management_system/core/enums/app_enums.dart';
 
 class LeaveRequestFormScreen extends ConsumerStatefulWidget {
@@ -55,11 +57,21 @@ class _LeaveRequestFormScreenState extends ConsumerState<LeaveRequestFormScreen>
   }
 
   void _saveLeaveRequest() {
+    final leaveRequestState = ref.read(leaveRequestProvider);
+
     if (_formKey.currentState!.validate() && _selectedEmployeeId != null) {
-      if (_startDate.isAfter(_endDate)) {
+      final validationResult = validateLeaveRequestRange(
+        employeeId: _selectedEmployeeId!,
+        startDate: _startDate,
+        endDate: _endDate,
+        existingRequests: leaveRequestState.leaveRequests,
+        currentRequestId: widget.leaveRequest?.id,
+      );
+
+      if (validationResult != null && !validationResult.isValid) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Start Date cannot be after End Date'),
+          SnackBar(
+            content: Text(validationResult.message ?? 'Invalid leave request range.'),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
           ),

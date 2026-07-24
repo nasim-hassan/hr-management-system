@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hr_management_system/core/theme/app_theme.dart';
+import 'package:hr_management_system/core/enums/app_enums.dart';
 import 'package:hr_management_system/data/models/employee_model.dart';
 import 'package:hr_management_system/data/providers/employee_provider.dart';
 import 'package:hr_management_system/config/app_routes.dart';
@@ -51,10 +52,13 @@ class _EmployeeDetailsScreenState extends ConsumerState<EmployeeDetailsScreen> {
                     title: 'Professional Info',
                     icon: Icons.work,
                     children: [
-                      _buildInfoRow('Department', employee.department),
-                      _buildInfoRow('Designation', employee.designation.displayName),
-                      _buildInfoRow('Manager', employee.manager ?? 'N/A'),
-                      _buildInfoRow('Date of Joining', employee.dateOfJoining.toString().split(' ')[0]),
+                      _buildInfoRow('Department', employee.department ?? 'N/A'),
+                      _buildInfoRow(
+                        'Designation',
+                        employee.designation != null && employee.designation!.isNotEmpty
+                            ? Designation.fromString(employee.designation!).displayName
+                            : 'N/A',
+                      ),
                       _buildInfoRow('Status', employee.isActive ? 'Active' : 'Inactive'),
                     ],
                   ),
@@ -63,10 +67,8 @@ class _EmployeeDetailsScreenState extends ConsumerState<EmployeeDetailsScreen> {
                     title: 'Contact Info',
                     icon: Icons.contact_mail,
                     children: [
-                      _buildInfoRow('Email', employee.email),
+                          _buildInfoRow('Email', employee.email),
                       _buildInfoRow('Phone', employee.phoneNumber),
-                      _buildInfoRow('Emergency Contact', employee.emergencyContact ?? 'N/A'),
-                      _buildInfoRow('Emergency Phone', employee.emergencyContactNumber ?? 'N/A'),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -74,10 +76,11 @@ class _EmployeeDetailsScreenState extends ConsumerState<EmployeeDetailsScreen> {
                     title: 'Personal Info',
                     icon: Icons.person,
                     children: [
-                      _buildInfoRow('Date of Birth', employee.dateOfBirth.toString().split(' ')[0]),
-                      _buildInfoRow('Gender', employee.gender ?? 'N/A'),
-                      _buildInfoRow('Blood Group', 'O+'), // Add to model if needed
-                      _buildInfoRow('Marital Status', employee.maritalStatus ?? 'N/A'),
+                          _buildInfoRow('Address', employee.address ?? 'N/A'),
+                      _buildInfoRow('City', employee.city ?? 'N/A'),
+                      _buildInfoRow('Zip Code', employee.zipCode ?? 'N/A'),
+                      _buildInfoRow('Country', employee.country ?? 'N/A'),
+                      _buildInfoRow('NID Number', employee.nidNumber ?? 'N/A'),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -85,10 +88,13 @@ class _EmployeeDetailsScreenState extends ConsumerState<EmployeeDetailsScreen> {
                     title: 'Salary Information',
                     icon: Icons.account_balance_wallet,
                     children: [
-                      _buildInfoRow('Base Salary', employee.baseSalary != null ? '₹${employee.baseSalary!.round()}' : 'N/A'),
-                      _buildInfoRow('Allowances', employee.allowances != null ? '+₹${employee.allowances!.round()}' : 'N/A'),
-                      _buildInfoRow('Deductions', employee.deductions != null ? '-₹${employee.deductions!.round()}' : 'N/A'),
-                      _buildHighlightedInfoRow('Net Monthly Salary', employee.baseSalary != null ? '₹${employee.netSalary.toStringAsFixed(0)}' : 'N/A', Colors.green),
+                      _buildInfoRow('Base Salary', employee.baseSalary != null ? '৳${employee.baseSalary!.toStringAsFixed(2)}' : 'N/A'),
+                      _buildInfoRow('Allowances', employee.allowances != null ? '৳${employee.allowances!.toStringAsFixed(2)}' : 'N/A'),
+                      _buildInfoRow('Net Salary', _calculateNetSalary(employee)),
+                      _buildInfoRow('Account Number', employee.accountNumber ?? 'N/A'),
+                      _buildInfoRow('Bank Name', employee.bankName ?? 'N/A'),
+                      _buildInfoRow('Account Holder', employee.accountHolderName ?? 'N/A'),
+                      _buildInfoRow('Branch', employee.branchName ?? 'N/A'),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -96,11 +102,9 @@ class _EmployeeDetailsScreenState extends ConsumerState<EmployeeDetailsScreen> {
                     title: 'Identity & Address',
                     icon: Icons.location_on,
                     children: [
-                      _buildInfoRow('PAN Number', employee.panNumber ?? 'N/A'),
-                      _buildInfoRow('Aadhar Number', employee.aadharNumber ?? 'N/A'),
+                      _buildInfoRow('NID Number', employee.nidNumber ?? 'N/A'),
                       _buildInfoRow('Address', employee.address ?? 'N/A'),
                       _buildInfoRow('City', employee.city ?? 'N/A'),
-                      _buildInfoRow('State', employee.state ?? 'N/A'),
                       _buildInfoRow('Zip Code', employee.zipCode ?? 'N/A'),
                       _buildInfoRow('Country', employee.country ?? 'N/A'),
                     ],
@@ -159,7 +163,7 @@ class _EmployeeDetailsScreenState extends ConsumerState<EmployeeDetailsScreen> {
                 ),
               ),
               Text(
-                employee.designation.displayName,
+                employee.email,
                 style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.8),
                   fontSize: 16,
@@ -220,6 +224,13 @@ class _EmployeeDetailsScreenState extends ConsumerState<EmployeeDetailsScreen> {
     );
   }
 
+  String _calculateNetSalary(Employee employee) {
+    final base = employee.baseSalary ?? 0;
+    final allowances = employee.allowances ?? 0;
+    final net = base + allowances;
+    return '৳${net.toStringAsFixed(2)}';
+  }
+
   Widget _buildInfoRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -251,35 +262,4 @@ class _EmployeeDetailsScreenState extends ConsumerState<EmployeeDetailsScreen> {
     );
   }
 
-  Widget _buildHighlightedInfoRow(String label, String value, Color valueColor) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            flex: 2,
-            child: Text(
-              label,
-              style: const TextStyle(
-                color: AppTheme.textSecondaryColor,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          Expanded(
-            flex: 3,
-            child: Text(
-              value,
-              style: TextStyle(
-                color: valueColor,
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

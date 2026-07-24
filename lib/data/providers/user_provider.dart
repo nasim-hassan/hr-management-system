@@ -53,7 +53,11 @@ class UserListNotifier extends StateNotifier<UserListState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       // 1. Sign up the user in Supabase Auth to get an auth ID
-      final authId = await AuthService.signUp(email: email, password: password);
+      final authId = await AuthService.signUp(
+        email: email,
+        password: password,
+        fullName: fullName,
+      );
       if (authId == null) {
         state = state.copyWith(isLoading: false, error: 'Failed to create user in authentication system');
         return false;

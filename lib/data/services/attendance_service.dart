@@ -1,5 +1,7 @@
 import 'package:hr_management_system/config/supabase_config.dart';
+import 'package:hr_management_system/core/enums/app_enums.dart';
 import 'package:hr_management_system/data/models/attendance_model.dart';
+
 
 class AttendanceService {
   static const String _tableName = 'attendance';
@@ -75,6 +77,9 @@ class AttendanceService {
           .single();
 
       if (response == null) return null;
+
+
+
       return Attendance.fromJson(response as Map<String, dynamic>);
     } catch (e) {
       throw Exception('Failed to insert attendance record: $e');

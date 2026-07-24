@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hr_management_system/data/models/holiday_model.dart';
 import 'package:hr_management_system/data/models/mock_data.dart';
+import 'package:hr_management_system/data/services/holiday_service.dart';
 
 class HolidayState {
   final List<int> weeklyHolidays;
@@ -35,12 +36,15 @@ class HolidayNotifier extends StateNotifier<HolidayState> {
     loadHolidays();
   }
 
-  void loadHolidays() {
+  Future<void> loadHolidays() async {
     state = state.copyWith(isLoading: true, error: null);
     try {
+      final holidays = await HolidayService.getAllHolidays();
+      final customHolidays = holidays.where((holiday) => holiday.isCustom).toList();
+
       state = HolidayState(
         weeklyHolidays: List<int>.from(MockDataProvider.mockWeeklyHolidays),
-        customHolidays: List<Holiday>.from(MockDataProvider.mockCustomHolidays),
+        customHolidays: customHolidays,
         isLoading: false,
       );
     } catch (e) {
@@ -70,12 +74,15 @@ class HolidayNotifier extends StateNotifier<HolidayState> {
 
   Future<bool> addCustomHoliday(Holiday holiday) async {
     try {
-      final updatedCustom = List<Holiday>.from(state.customHolidays);
-      updatedCustom.add(holiday);
-      updatedCustom.sort((a, b) => a.date.compareTo(b.date));
+      final createdHoliday = await HolidayService.createHoliday(holiday);
+      if (createdHoliday == null) {
+        state = state.copyWith(error: 'Failed to save holiday');
+        return false;
+      }
 
-      MockDataProvider.mockCustomHolidays.clear();
-      MockDataProvider.mockCustomHolidays.addAll(updatedCustom);
+      final updatedCustom = List<Holiday>.from(state.customHolidays)
+        ..add(createdHoliday)
+        ..sort((a, b) => a.date.compareTo(b.date));
 
       state = state.copyWith(customHolidays: updatedCustom);
       return true;
@@ -87,11 +94,13 @@ class HolidayNotifier extends StateNotifier<HolidayState> {
 
   Future<bool> deleteCustomHoliday(String holidayId) async {
     try {
+      final deleted = await HolidayService.deleteHoliday(holidayId);
+      if (!deleted) {
+        state = state.copyWith(error: 'Failed to delete holiday');
+        return false;
+      }
+
       final updatedCustom = state.customHolidays.where((h) => h.id != holidayId).toList();
-
-      MockDataProvider.mockCustomHolidays.clear();
-      MockDataProvider.mockCustomHolidays.addAll(updatedCustom);
-
       state = state.copyWith(customHolidays: updatedCustom);
       return true;
     } catch (e) {

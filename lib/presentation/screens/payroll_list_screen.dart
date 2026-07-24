@@ -197,7 +197,7 @@ class _PayrollListScreenState extends ConsumerState<PayrollListScreen> {
                     Row(
                       children: [
                         Text(
-                          '₹${payroll.netSalary.toStringAsFixed(2)}',
+                          '৳${payroll.netSalary.toStringAsFixed(2)}',
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,

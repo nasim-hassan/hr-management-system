@@ -21,7 +21,8 @@ class NotificationService {
     }
   }
 
-  static Future<Notification?> fetchNotificationById(String notificationId) async {
+  static Future<Notification?> fetchNotificationById(
+      String notificationId) async {
     try {
       final response = await SupabaseConfig.client
           .from(_tableName)
@@ -36,14 +37,44 @@ class NotificationService {
     }
   }
 
-  static Future<Notification?> createNotification(Notification notification) async {
+  static Future<Notification?> createNotification(
+      Notification notification) async {
     try {
-      final data = notification.toJson();
-      if (notification.id.startsWith('notif_')) data.remove('id');
+      final notificationData = notification.toJson();
+      if (notification.id.startsWith('notif_')) notificationData.remove('id');
+
+      final existingResponse = await SupabaseConfig.client
+          .from(_tableName)
+          .select()
+          .eq('user_id', notification.userId)
+          .eq('type', notification.type.toStringValue())
+          .eq('related_id', notification.relatedId)
+          .eq('related_type', notification.relatedType);
+
+      if (existingResponse != null &&
+          existingResponse is List &&
+          existingResponse.isNotEmpty) {
+        final existingNotifications = existingResponse
+            .whereType<Map<String, dynamic>>()
+            .map((item) => Notification.fromJson(item))
+            .toList();
+
+        if (existingNotifications.isNotEmpty) {
+          if (existingNotifications.length > 1) {
+            for (final duplicate in existingNotifications.skip(1)) {
+              await SupabaseConfig.client
+                  .from(_tableName)
+                  .delete()
+                  .eq('id', duplicate.id);
+            }
+          }
+          return existingNotifications.first;
+        }
+      }
 
       final response = await SupabaseConfig.client
           .from(_tableName)
-          .insert(data)
+          .insert(notificationData)
           .select()
           .single();
 
@@ -54,7 +85,8 @@ class NotificationService {
     }
   }
 
-  static Future<Notification?> updateNotification(String notificationId, Map<String, dynamic> data) async {
+  static Future<Notification?> updateNotification(
+      String notificationId, Map<String, dynamic> data) async {
     try {
       final response = await SupabaseConfig.client
           .from(_tableName)

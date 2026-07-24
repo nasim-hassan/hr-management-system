@@ -74,9 +74,12 @@ class EmployeeService {
 
   static Future<Employee?> createEmployee(Employee employee) async {
     try {
+      final data = Map<String, dynamic>.from(employee.toJson())
+        ..removeWhere((key, value) => value == null || (key == 'id' && (value is String && value.isEmpty)));
+
       final response = await SupabaseConfig.client
           .from(_tableName)
-          .insert(employee.toJson())
+          .insert(data)
           .select()
           .single();
 

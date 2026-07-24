@@ -106,7 +106,6 @@ features=(
     "lib/features/leave"
     "lib/features/payroll"
     "lib/features/reports"
-    "lib/features/notifications"
     "lib/features/profile"
 )
 

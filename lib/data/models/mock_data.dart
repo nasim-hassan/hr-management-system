@@ -5,7 +5,6 @@ import 'package:hr_management_system/data/models/attendance_model.dart';
 import 'package:hr_management_system/data/models/leave_request_model.dart';
 import 'package:hr_management_system/data/models/payroll_model.dart';
 import 'package:hr_management_system/data/models/performance_review_model.dart';
-import 'package:hr_management_system/data/models/notification_model.dart';
 import 'package:hr_management_system/data/models/report_model.dart';
 import 'package:hr_management_system/data/models/holiday_model.dart';
 
@@ -76,24 +75,13 @@ class MockDataProvider {
       phoneNumber: '+880-1711-543212',
       address: '123 Banani, Road 11',
       city: 'Dhaka',
-      state: 'Dhaka',
       zipCode: '1213',
       country: 'Bangladesh',
-      dateOfBirth: DateTime(1995, 6, 15),
-      gender: 'Male',
-      maritalStatus: 'Single',
-      dateOfJoining: DateTime(2022, 3, 1),
-      designation: Designation.juniorDeveloper,
-      department: 'Engineering',
+      nidNumber: 'NID1234567890',
       manager: 'user_2',
-      baseSalary: 500000,
       accountNumber: '123456789012',
-      bankName: 'Dutch-Bangla Bank',
-      ifscCode: 'DBBL0001234',
-      panNumber: 'TIN12345678',
-      aadharNumber: 'NID1234567890',
-      emergencyContact: 'Ratul Islam',
-      emergencyContactNumber: '+880-1711-543220',
+      accountHolderName: 'Emon Khan',
+      branchName: 'Dutch-Bangla Bank',
       isActive: true,
       createdAt: DateTime(2022, 3, 1),
     ),
@@ -106,24 +94,13 @@ class MockDataProvider {
       phoneNumber: '+880-1711-543213',
       address: '456 Gulshan Avenue',
       city: 'Dhaka',
-      state: 'Dhaka',
       zipCode: '1212',
       country: 'Bangladesh',
-      dateOfBirth: DateTime(1998, 8, 22),
-      gender: 'Female',
-      maritalStatus: 'Single',
-      dateOfJoining: DateTime(2023, 2, 15),
-      designation: Designation.juniorDeveloper,
-      department: 'Engineering',
+      nidNumber: 'NID1234567891',
       manager: 'user_2',
-      baseSalary: 520000,
       accountNumber: '123456789013',
-      bankName: 'BRAC Bank',
-      ifscCode: 'BRAC0001234',
-      panNumber: 'TIN12345679',
-      aadharNumber: 'NID1234567891',
-      emergencyContact: 'Nasim Hassan',
-      emergencyContactNumber: '+880-1711-543221',
+      accountHolderName: 'Lamia Tondra',
+      branchName: 'BRAC Bank',
       isActive: true,
       createdAt: DateTime(2023, 2, 15),
     ),
@@ -136,24 +113,13 @@ class MockDataProvider {
       phoneNumber: '+880-1711-543214',
       address: '789 Dhanmondi, Road 27',
       city: 'Dhaka',
-      state: 'Dhaka',
       zipCode: '1209',
       country: 'Bangladesh',
-      dateOfBirth: DateTime(1992, 12, 10),
-      gender: 'Male',
-      maritalStatus: 'Married',
-      dateOfJoining: DateTime(2021, 5, 1),
-      designation: Designation.seniorDeveloper,
-      department: 'Engineering',
+      nidNumber: 'NID1234567892',
       manager: 'user_2',
-      baseSalary: 750000,
       accountNumber: '123456789014',
-      bankName: 'City Bank',
-      ifscCode: 'CITY0001234',
-      panNumber: 'TIN12345680',
-      aadharNumber: 'NID1234567892',
-      emergencyContact: 'Atik Hassan',
-      emergencyContactNumber: '+880-1711-543222',
+      accountHolderName: 'Rayan Khan',
+      branchName: 'City Bank',
       isActive: true,
       createdAt: DateTime(2021, 5, 1),
     ),
@@ -399,72 +365,7 @@ class MockDataProvider {
     ),
   ];
 
-  // ==================== MOCK NOTIFICATIONS ====================
-  static final List<Notification> mockNotifications = [
-    Notification(
-      id: 'notif_1',
-      userId: 'user_3',
-      type: NotificationType.leaveApproved,
-      title: 'Leave Request Approved',
-      message: 'Your leave request for May 1-5 has been approved.',
-      relatedId: 'leave_1',
-      relatedType: 'LeaveRequest',
-      data: {'leaveType': 'annual', 'days': 5},
-      isRead: true,
-      createdAt: DateTime(2024, 4, 20),
-      readAt: DateTime(2024, 4, 20, 10, 30),
-    ),
-    Notification(
-      id: 'notif_2',
-      userId: 'user_4',
-      type: NotificationType.attendanceReminder,
-      title: 'Attendance Reminder',
-      message: 'Please mark your attendance for today.',
-      relatedId: '223071045',
-      relatedType: 'Employee',
-      data: {'date': '2024-04-24'},
-      isRead: false,
-      createdAt: DateTime(2024, 4, 24, 9, 0),
-    ),
-    Notification(
-      id: 'notif_3',
-      userId: 'user_3',
-      type: NotificationType.payslipReady,
-      title: 'Payslip Ready for Download',
-      message: 'Your April 2024 payslip is now available for download.',
-      relatedId: 'payroll_2',
-      relatedType: 'Payroll',
-      data: {'month': 4, 'year': 2024},
-      isRead: true,
-      createdAt: DateTime(2024, 4, 30),
-      readAt: DateTime(2024, 5, 1, 8, 15),
-    ),
-    Notification(
-      id: 'notif_4',
-      userId: 'user_4',
-      type: NotificationType.performanceReview,
-      title: 'Q1 Performance Review Completed',
-      message: 'Your Q1 2024 performance review has been completed.',
-      relatedId: 'review_2',
-      relatedType: 'PerformanceReview',
-      data: {'quarter': 'Q1', 'year': 2024},
-      isRead: false,
-      createdAt: DateTime(2024, 4, 12),
-    ),
-    Notification(
-      id: 'notif_5',
-      userId: 'user_1',
-      type: NotificationType.announcement,
-      title: 'New Holiday Policy',
-      message: 'The updated holiday policy for 2024 is now available in the HR portal.',
-      relatedId: null,
-      relatedType: null,
-      data: {},
-      isRead: true,
-      createdAt: DateTime(2024, 4, 15),
-      readAt: DateTime(2024, 4, 15, 14, 0),
-    ),
-  ];
+
 
   // ==================== MOCK REPORTS ====================
   static final List<Report> mockReports = [
@@ -525,7 +426,6 @@ class MockDataProvider {
       'leaveRequests': mockLeaveRequests,
       'payroll': mockPayroll,
       'performanceReviews': mockPerformanceReviews,
-      'notifications': mockNotifications,
       'reports': mockReports,
     };
   }
@@ -554,19 +454,7 @@ class MockDataProvider {
     return mockPayroll.where((payroll) => payroll.employeeId == employeeId).toList();
   }
 
-  /// Get mock notifications for user
-  static List<Notification> getMockNotificationsByUser(String userId) {
-    return mockNotifications
-        .where((notif) => notif.userId == userId)
-        .toList();
-  }
 
-  /// Get unread notifications for user
-  static List<Notification> getUnreadNotifications(String userId) {
-    return mockNotifications
-        .where((notif) => notif.userId == userId && !notif.isRead)
-        .toList();
-  }
 
   /// Get summary statistics
   static Map<String, dynamic> getMockStatistics() {

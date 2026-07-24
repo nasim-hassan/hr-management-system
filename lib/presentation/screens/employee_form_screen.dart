@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hr_management_system/core/theme/app_theme.dart';
-import 'package:hr_management_system/data/models/employee_model.dart';
-// Mock data no longer used here; employeeProvider handles storage
 import 'package:hr_management_system/core/enums/app_enums.dart';
+import 'package:hr_management_system/data/models/employee_model.dart';
 import 'package:hr_management_system/data/providers/employee_provider.dart';
 
 class EmployeeFormScreen extends ConsumerStatefulWidget {
@@ -23,14 +22,19 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
   late TextEditingController _lastNameController;
   late TextEditingController _emailController;
   late TextEditingController _phoneController;
+  late TextEditingController _addressController;
   late TextEditingController _departmentController;
-  
+  late TextEditingController _cityController;
+  late TextEditingController _zipCodeController;
+  late TextEditingController _countryController;
+  late TextEditingController _nidNumberController;
+  late TextEditingController _accountNumberController;
+  late TextEditingController _accountHolderNameController;
+  late TextEditingController _bankNameController;
+  late TextEditingController _branchNameController;
   late TextEditingController _baseSalaryController;
   late TextEditingController _allowancesController;
-  late TextEditingController _deductionsController;
-  double _calculatedNetSalary = 0.0;
-  
-  Designation _selectedDesignation = Designation.juniorDeveloper;
+  Designation? _designation;
   bool _isActive = true;
 
   @override
@@ -41,20 +45,23 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
     _lastNameController = TextEditingController(text: widget.employee?.lastName ?? '');
     _emailController = TextEditingController(text: widget.employee?.email ?? '');
     _phoneController = TextEditingController(text: widget.employee?.phoneNumber ?? '');
+    _addressController = TextEditingController(text: widget.employee?.address ?? '');
     _departmentController = TextEditingController(text: widget.employee?.department ?? '');
-    
-    _baseSalaryController = TextEditingController(text: widget.employee?.baseSalary?.round().toString() ?? '');
-    _allowancesController = TextEditingController(text: widget.employee?.allowances?.round().toString() ?? '');
-    _deductionsController = TextEditingController(text: widget.employee?.deductions?.round().toString() ?? '');
-    
-    _calculateNetSalary();
-    
-    _baseSalaryController.addListener(_calculateNetSalary);
-    _allowancesController.addListener(_calculateNetSalary);
-    _deductionsController.addListener(_calculateNetSalary);
+    _cityController = TextEditingController(text: widget.employee?.city ?? '');
+    _zipCodeController = TextEditingController(text: widget.employee?.zipCode ?? '');
+    _countryController = TextEditingController(text: widget.employee?.country ?? '');
+    _nidNumberController = TextEditingController(text: widget.employee?.nidNumber ?? '');
+    _accountNumberController = TextEditingController(text: widget.employee?.accountNumber ?? '');
+    _accountHolderNameController = TextEditingController(text: widget.employee?.accountHolderName ?? '');
+    _bankNameController = TextEditingController(text: widget.employee?.bankName ?? '');
+    _branchNameController = TextEditingController(text: widget.employee?.branchName ?? '');
+    _baseSalaryController = TextEditingController(text: widget.employee?.baseSalary?.toString() ?? '');
+    _allowancesController = TextEditingController(text: widget.employee?.allowances?.toString() ?? '');
+    _designation = widget.employee?.designation != null
+        ? Designation.fromString(widget.employee!.designation!)
+        : null;
     
     if (widget.employee != null) {
-      _selectedDesignation = widget.employee!.designation;
       _isActive = widget.employee!.isActive;
     }
   }
@@ -66,20 +73,19 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
     _lastNameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
+    _addressController.dispose();
     _departmentController.dispose();
+    _cityController.dispose();
+    _zipCodeController.dispose();
+    _countryController.dispose();
+    _nidNumberController.dispose();
+    _accountNumberController.dispose();
+    _accountHolderNameController.dispose();
+    _bankNameController.dispose();
+    _branchNameController.dispose();
     _baseSalaryController.dispose();
     _allowancesController.dispose();
-    _deductionsController.dispose();
     super.dispose();
-  }
-
-  void _calculateNetSalary() {
-    final base = double.tryParse(_baseSalaryController.text) ?? 0.0;
-    final allowances = double.tryParse(_allowancesController.text) ?? 0.0;
-    final deductions = double.tryParse(_deductionsController.text) ?? 0.0;
-    setState(() {
-      _calculatedNetSalary = base + allowances - deductions;
-    });
   }
 
   void _saveEmployee() async {
@@ -89,11 +95,20 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
       final lastName = _lastNameController.text.trim();
       final email = _emailController.text.trim();
       final phone = _phoneController.text.trim();
-      final department = _departmentController.text.trim();
-      final baseSalary = double.tryParse(_baseSalaryController.text) ?? 0.0;
-      final allowances = double.tryParse(_allowancesController.text) ?? 0.0;
-      final deductions = double.tryParse(_deductionsController.text) ?? 0.0;
-      
+      final address = _addressController.text.trim().isEmpty ? null : _addressController.text.trim();
+      final department = _departmentController.text.trim().isEmpty ? null : _departmentController.text.trim();
+      final designation = _designation?.toStringValue();
+      final city = _cityController.text.trim().isEmpty ? null : _cityController.text.trim();
+      final zipCode = _zipCodeController.text.trim().isEmpty ? null : _zipCodeController.text.trim();
+      final country = _countryController.text.trim().isEmpty ? null : _countryController.text.trim();
+      final nidNumber = _nidNumberController.text.trim().isEmpty ? null : _nidNumberController.text.trim();
+      final accountNumber = _accountNumberController.text.trim().isEmpty ? null : _accountNumberController.text.trim();
+      final accountHolderName = _accountHolderNameController.text.trim().isEmpty ? null : _accountHolderNameController.text.trim();
+      final bankName = _bankNameController.text.trim().isEmpty ? null : _bankNameController.text.trim();
+      final branchName = _branchNameController.text.trim().isEmpty ? null : _branchNameController.text.trim();
+      final baseSalary = _baseSalaryController.text.trim().isEmpty ? null : double.tryParse(_baseSalaryController.text.trim());
+      final allowances = _allowancesController.text.trim().isEmpty ? null : double.tryParse(_allowancesController.text.trim());
+
       // Show loading dialog
       showDialog(
         context: context,
@@ -102,44 +117,61 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
       );
 
       try {
-          if (widget.employee == null) {
+        if (widget.employee == null) {
           // Add Mode
           final newEmployee = Employee(
             id: id,
-            userId: '',
+            userId: null,
             firstName: firstName,
             lastName: lastName,
             email: email,
             phoneNumber: phone,
-            dateOfBirth: DateTime(1995, 1, 1),
-            dateOfJoining: DateTime.now(),
-            designation: _selectedDesignation,
+            address: address,
             department: department,
+            designation: designation,
+            city: city,
+            zipCode: zipCode,
+            country: country,
+            nidNumber: nidNumber,
+            manager: null,
+            accountNumber: accountNumber,
+            accountHolderName: accountHolderName,
+            bankName: bankName,
+            branchName: branchName,
             baseSalary: baseSalary,
             allowances: allowances,
-            deductions: deductions,
             isActive: _isActive,
             createdAt: DateTime.now(),
           );
-          
+
           final success = await ref.read(employeeProvider.notifier).addEmployee(newEmployee);
           if (!success) throw Exception('Failed to add employee to the system');
         } else {
           // Edit Mode
           final updatedEmployee = widget.employee!.copyWith(
+            userId: widget.employee?.userId,
             firstName: firstName,
             lastName: lastName,
             email: email,
             phoneNumber: phone,
+            address: address,
             department: department,
-            designation: _selectedDesignation,
+            designation: designation,
+            city: city,
+            zipCode: zipCode,
+            country: country,
+            nidNumber: nidNumber,
+            manager: null,
+            accountNumber: accountNumber,
+            accountHolderName: accountHolderName,
+            bankName: bankName,
+            branchName: branchName,
             baseSalary: baseSalary,
             allowances: allowances,
-            deductions: deductions,
             isActive: _isActive,
             updatedAt: DateTime.now(),
           );
-          
+
           final success = await ref.read(employeeProvider.notifier).updateEmployee(updatedEmployee);
           if (!success) throw Exception('Failed to update employee in the system');
         }
@@ -202,17 +234,8 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
                     controller: _idController,
                     label: 'Employee ID',
                     icon: Icons.badge,
-                    enabled: widget.employee == null,
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) return 'Required';
-                        if (widget.employee == null) {
-                        final exists = ref.read(employeeProvider).employees.any(
-                          (emp) => emp.id.trim().toLowerCase() == v.trim().toLowerCase(),
-                        );
-                        if (exists) return 'Employee ID already exists';
-                      }
-                      return null;
-                    },
+                    enabled: false,
+                    validator: (_) => null,
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -261,14 +284,15 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
                   _buildTextField(
                     controller: _departmentController,
                     label: 'Department',
-                    icon: Icons.domain,
-                    validator: (v) => v!.isEmpty ? 'Required' : null,
+                    icon: Icons.business,
+                    validator: (v) => null,
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<Designation>(
+                    initialValue: _designation,
                     decoration: InputDecoration(
                       labelText: 'Designation',
-                      prefixIcon: const Icon(Icons.work, color: AppTheme.primaryColor),
+                      prefixIcon: const Icon(Icons.work),
                       filled: true,
                       fillColor: Colors.grey.shade50,
                       border: OutlineInputBorder(
@@ -276,19 +300,16 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
                         borderSide: BorderSide(color: Colors.grey.shade300),
                       ),
                     ),
-                    initialValue: _selectedDesignation,
-                    items: Designation.values.map((d) {
-                      return DropdownMenuItem(
-                        value: d,
-                        child: Text(d.displayName),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      setState(() {
-                        if (val != null) _selectedDesignation = val;
-                      });
+                    items: Designation.values
+                        .map((designation) => DropdownMenuItem(
+                              value: designation,
+                              child: Text(designation.displayName),
+                            ))
+                        .toList(),
+                    onChanged: (designation) {
+                      setState(() => _designation = designation);
                     },
-                    validator: (val) => val == null ? 'Please select a designation' : null,
+                    validator: (v) => null,
                   ),
                   const SizedBox(height: 16),
                   SwitchListTile(
@@ -304,82 +325,105 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
               ),
               const SizedBox(height: 16),
               _buildSectionCard(
-                title: 'Salary Breakdown Setup',
+                title: 'Identity & Address',
                 children: [
                   _buildTextField(
-                    controller: _baseSalaryController,
-                    label: 'Base Salary',
-                    icon: Icons.currency_rupee,
-                    keyboardType: TextInputType.number,
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) return 'Required';
-                      if (double.tryParse(v) == null) return 'Enter a valid number';
-                      return null;
-                    },
+                    controller: _nidNumberController,
+                    label: 'NID Number',
+                    icon: Icons.perm_identity,
+                    validator: (v) => null,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildTextField(
+                    controller: _addressController,
+                    label: 'Address',
+                    icon: Icons.home,
+                    validator: (v) => null,
                   ),
                   const SizedBox(height: 16),
                   Row(
                     children: [
                       Expanded(
                         child: _buildTextField(
-                          controller: _allowancesController,
-                          label: 'Allowances',
-                          icon: Icons.add_circle_outline,
-                          keyboardType: TextInputType.number,
-                          validator: (v) {
-                            if (v != null && v.isNotEmpty && double.tryParse(v) == null) {
-                              return 'Enter number';
-                            }
-                            return null;
-                          },
+                          controller: _cityController,
+                          label: 'City',
+                          icon: Icons.location_city,
+                          validator: (v) => null,
                         ),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
                         child: _buildTextField(
-                          controller: _deductionsController,
-                          label: 'Deductions',
-                          icon: Icons.remove_circle_outline,
+                          controller: _zipCodeController,
+                          label: 'Zip Code',
+                          icon: Icons.local_post_office,
                           keyboardType: TextInputType.number,
-                          validator: (v) {
-                            if (v != null && v.isNotEmpty && double.tryParse(v) == null) {
-                              return 'Enter number';
-                            }
-                            return null;
-                          },
+                          validator: (v) => null,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.15)),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Calculated Net Salary',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.primaryColor,
-                          ),
-                        ),
-                        Text(
-                          '₹${_calculatedNetSalary.toStringAsFixed(0)}',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.successColor,
-                          ),
-                        ),
-                      ],
-                    ),
+                  const SizedBox(height: 16),
+                  _buildTextField(
+                    controller: _countryController,
+                    label: 'Country',
+                    icon: Icons.flag,
+                    validator: (v) => null,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _buildSectionCard(
+                title: 'Salary Breakdown',
+                children: [
+                  _buildTextField(
+                    controller: _baseSalaryController,
+                    label: 'Base Salary',
+                    icon: Icons.currency_exchange,
+                    keyboardType: TextInputType.number,
+                    validator: (v) => null,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildTextField(
+                    controller: _allowancesController,
+                    label: 'Allowances',
+                    icon: Icons.add_circle_outline,
+                    keyboardType: TextInputType.number,
+                    validator: (v) => null,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _buildSectionCard(
+                title: 'Bank Details',
+                children: [
+                  _buildTextField(
+                    controller: _accountNumberController,
+                    label: 'Bank Account Number',
+                    icon: Icons.account_balance,
+                    keyboardType: TextInputType.number,
+                    validator: (v) => null,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildTextField(
+                    controller: _accountHolderNameController,
+                    label: 'Account Holder Name',
+                    icon: Icons.account_circle,
+                    validator: (v) => null,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildTextField(
+                    controller: _bankNameController,
+                    label: 'Bank Name',
+                    icon: Icons.account_balance,
+                    validator: (v) => null,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildTextField(
+                    controller: _branchNameController,
+                    label: 'Branch Name',
+                    icon: Icons.account_balance_wallet,
+                    validator: (v) => null,
                   ),
                 ],
               ),
@@ -435,12 +479,15 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
     TextInputType? keyboardType,
     String? Function(String?)? validator,
     bool enabled = true,
+    VoidCallback? onTap,
   }) {
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
       validator: validator,
       enabled: enabled,
+      readOnly: onTap != null,
+      onTap: onTap,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, color: enabled ? AppTheme.primaryColor : Colors.grey),
@@ -465,4 +512,5 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
       ),
     );
   }
+
 }
